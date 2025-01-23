@@ -10,11 +10,13 @@ import (
 	"todo-demo/pkg/utils"
 )
 
+// authService 实现认证服务接口
 type authService struct {
-	userRepo repository.UserRepository
-	jwtCfg   *config.JWTConfig
+	userRepo repository.UserRepository // 用户数据访问接口
+	jwtCfg   *config.JWTConfig         // JWT配置信息
 }
 
+// NewAuthService 创建认证服务实例
 func NewAuthService(userRepo repository.UserRepository, jwtCfg *config.JWTConfig) *authService {
 	return &authService{
 		userRepo: userRepo,
@@ -22,6 +24,7 @@ func NewAuthService(userRepo repository.UserRepository, jwtCfg *config.JWTConfig
 	}
 }
 
+// Register 实现用户注册逻辑
 func (s *authService) Register(ctx context.Context, req *auth.RegisterRequest) error {
 	// 检查用户是否已存在
 	_, err := s.userRepo.GetByUsername(ctx, req.Username)
@@ -37,6 +40,7 @@ func (s *authService) Register(ctx context.Context, req *auth.RegisterRequest) e
 		Username: req.Username,
 		Email:    req.Email,
 	}
+	// 设置加密密码
 	if err := user.SetPassword(req.Password); err != nil {
 		return err
 	}
@@ -44,8 +48,9 @@ func (s *authService) Register(ctx context.Context, req *auth.RegisterRequest) e
 	return s.userRepo.Create(ctx, user)
 }
 
+// Login 实现用户登录逻辑
 func (s *authService) Login(ctx context.Context, req *auth.LoginRequest) (string, error) {
-	// 获取用户
+	// 获取用户信息
 	user, err := s.userRepo.GetByUsername(ctx, req.Username)
 	if err != nil {
 		if err == errors.ErrUserNotFound {
@@ -59,6 +64,6 @@ func (s *authService) Login(ctx context.Context, req *auth.LoginRequest) (string
 		return "", errors.ErrInvalidCredentials
 	}
 
-	// 生成 token
+	// 生成JWT令牌
 	return utils.GenerateToken(user.ID, s.jwtCfg)
 }
