@@ -1,0 +1,107 @@
+# Prometheus配置文件，用于监控系统指标
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: todo-app
+data:
+  prometheus.yml: |
+    # 全局配置
+    global:
+      scrape_interval: 15s    # 采集间隔
+      evaluation_interval: 15s # 规则评估间隔
+
+    # 采集配置
+    scrape_configs:
+      - job_name: 'todo-api'  # 采集任务名称
+        kubernetes_sd_configs: # Kubernetes服务发现
+          - role: pod         # 发现Pod类型的目标
+        relabel_configs:      # 标签重写规则
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            regex: todo-api   # 只采集带有app=todo-api标签的Pod
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_container_port_number]
+            regex: 8080      # 只采集8080端口
+            action: keep
+
+---
+# Prometheus部署配置
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: todo-app
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.30.3
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.retention.time=15d"
+            - "--web.enable-lifecycle"
+          ports:
+            - containerPort: 9090
+              name: http
+          resources:
+            requests:
+              cpu: 250m # 略微增加CPU请求
+              memory: 512Mi # 增加内存请求
+            limits:
+              cpu: 1000m # 增加CPU限制
+              memory: 1Gi # 增加内存限制
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+            - name: storage
+              mountPath: /prometheus
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: http
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+            periodSeconds: 10 # 添加检查间隔
+            failureThreshold: 3 # 添加失败阈值
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: http
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+            periodSeconds: 10 # 添加检查间隔
+            failureThreshold: 3 # 添加失败阈值
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+        - name: storage
+          emptyDir: {}
+
+---
+# Prometheus服务配置
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: todo-app
+  labels:
+    app: prometheus
+spec:
+  ports:
+    - port: 9090
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: prometheus

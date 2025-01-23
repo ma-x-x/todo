@@ -1,0 +1,25 @@
+# API版本和资源类型
+apiVersion: networking.k8s.io/v1
+kind: Ingress # Ingress用于配置外部访问规则
+
+# Ingress元数据
+metadata:
+  name: todo-api # Ingress名称
+  namespace: todo-app # 所属命名空间
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: / # URL重写规则
+    nginx.ingress.kubernetes.io/ssl-redirect: "false" # 禁用SSL重定向
+
+# Ingress规格
+spec:
+  rules:
+    - host: todo-api.example.com # 域名配置
+      http:
+        paths:
+          - path: / # 路径配置
+            pathType: Prefix # 路径匹配类型：前缀匹配
+            backend:
+              service:
+                name: todo-api # 后端服务名称
+                port:
+                  number: 80 # 服务端口

@@ -1,0 +1,153 @@
+package main
+
+// 导入所需的包
+import (
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+	"todo-demo/api/v1/routes"
+	_ "todo-demo/docs" // 导入swagger文档，用于API文档生成
+	"todo-demo/internal/service"
+	"todo-demo/pkg/cache"
+	"todo-demo/pkg/config"
+	"todo-demo/pkg/db"
+	"todo-demo/pkg/logger"
+	"todo-demo/pkg/middleware"
+
+	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
+)
+
+// Swagger文档注解
+// @title Todo API
+// @version 1.0
+// @description 这是一个待办事项管理系统的API服务
+// @host localhost:8080
+// @BasePath /api/v1
+// @schemes http
+// @produce application/json
+// @consume application/json
+
+// @securityDefinitions.apikey Bearer
+// @in header
+// @name Authorization
+// @description 在Authorization头部输入"Bearer "后跟JWT令牌
+
+// 程序入口函数
+func main() {
+	if err := run(); err != nil {
+		log.Fatalf("应用程序启动失败: %v", err)
+	}
+}
+
+// run 应用程序的主运行逻辑
+// 包含了完整的应用初始化和服务启动流程
+func run() error {
+	// 1. 加载配置文件
+	// 从配置文件中读取应用所需的各项配置
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		return fmt.Errorf("加载配置文件失败: %w", err)
+	}
+
+	// 2. 初始化日志系统
+	// 设置日志记录器，用于记录应用运行时的各种信息
+	if err := logger.Init(cfg.Logger); err != nil {
+		return fmt.Errorf("初始化日志系统失败: %w", err)
+	}
+
+	// 3. 初始化数据库连接
+	// 连接MySQL数据库，用于存储应用数据
+	db, err := db.Init(&cfg.Database)
+	if err != nil {
+		return fmt.Errorf("初始化数据库失败: %w", err)
+	}
+
+	// 4. 初始化Redis缓存
+	// 连接Redis，用于缓存和速率限制等功能
+	rdb, err := cache.InitRedis(&cfg.Redis)
+	if err != nil {
+		return fmt.Errorf("初始化Redis失败: %w", err)
+	}
+
+	// 5. 初始化各个服务
+	// 创建认证、待办事项、分类、提醒等服务的实例
+	services := initServices(db, rdb, &cfg.JWT)
+
+	// 6. 设置Gin框架的运行模式
+	// 可以是debug或release模式
+	gin.SetMode(cfg.Server.Mode)
+
+	// 7. 初始化Web服务器
+	r := gin.New()
+	// 添加全局中间件
+	r.Use(gin.Logger())                                  // 请求日志
+	r.Use(gin.Recovery())                                // 错误恢复
+	r.Use(middleware.RateLimiter(rdb, 100, time.Minute)) // Redis限流器，限制API访问频率
+
+	// 初始化路由
+	// 设置所有的API路由规则
+	r = routes.InitRouter(cfg, services.auth, services.todo, services.category, services.reminder)
+
+	// 8. 配置HTTP服务器
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
+		Handler: r,
+	}
+
+	// 在后台启动服务器
+	go func() {
+		log.Printf("服务器正在启动，监听端口%s", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("监听失败: %v", err)
+		}
+	}()
+
+	// 等待中断信号以优雅地关闭服务器
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("正在关闭服务器...")
+
+	// 设置5秒的超时时间来处理剩余请求
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// 优雅关闭服务器
+	if err := srv.Shutdown(ctx); err != nil {
+		return fmt.Errorf("服务器关闭失败: %w", err)
+	}
+
+	// 关闭Redis连接
+	if err := cache.Close(); err != nil {
+		log.Printf("关闭Redis连接失败: %v", err)
+	}
+
+	log.Println("服务器已成功关闭")
+	return nil
+}
+
+// services 结构体用于组织所有服务实例
+type services struct {
+	auth     service.AuthService     // 认证服务
+	todo     service.TodoService     // 待办事项服务
+	category service.CategoryService // 分类服务
+	reminder service.ReminderService // 提醒服务
+}
+
+// initServices 初始化所有服务
+// 创建并返回各个服务的实例
+func initServices(db *gorm.DB, rdb *redis.Client, jwtCfg *config.JWTConfig) *services {
+	return &services{
+		auth:     service.NewAuthService(db, rdb, jwtCfg),
+		todo:     service.NewTodoService(db),
+		category: service.NewCategoryService(db),
+		reminder: service.NewReminderService(db),
+	}
+}

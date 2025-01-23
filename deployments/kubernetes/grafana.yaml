@@ -1,0 +1,124 @@
+# Grafana数据源配置
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: todo-app
+data:
+  prometheus.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus:9090
+        access: proxy
+        isDefault: true
+        editable: true
+        jsonData:
+          timeInterval: "15s"
+          queryTimeout: "30s"
+
+---
+# Grafana部署配置
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: todo-app
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      securityContext:
+        fsGroup: 472 # Grafana容器需要的特定GID
+        supplementalGroups:
+          - 0
+      containers:
+        - name: grafana
+          image: grafana/grafana:8.2.2
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef: # 从Secret获取管理员密码
+                  name: grafana-secret
+                  key: admin-password
+            - name: GF_USERS_ALLOW_SIGN_UP
+              value: "false" # 禁用用户注册
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "true" # 允许匿名访问
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: "Viewer" # 匿名用户角色
+          resources:
+            requests:
+              cpu: 100m # 请求0.1核CPU
+              memory: 128Mi # 请求128MB内存
+            limits:
+              cpu: 200m # 最多使用0.2核CPU
+              memory: 256Mi # 最多使用256MB内存
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: storage
+              mountPath: /var/lib/grafana
+          livenessProbe: # 存活检查
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 60
+            timeoutSeconds: 30
+          readinessProbe: # 就绪检查
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 60
+            timeoutSeconds: 30
+      volumes:
+        - name: datasources
+          configMap:
+            name: grafana-datasources
+        - name: storage
+          persistentVolumeClaim: # 使用持久化存储
+            claimName: grafana-pvc
+
+---
+# Grafana持久化存储配置
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-pvc
+  namespace: todo-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# Grafana服务配置
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: todo-app
+  labels:
+    app: grafana
+spec:
+  ports:
+    - port: 3000
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: grafana

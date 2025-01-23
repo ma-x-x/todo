@@ -1,0 +1,45 @@
+# 指定docker-compose文件版本
+version: "3.8"
+
+# 定义服务
+services:
+  # API应用服务
+  app:
+    build:
+      context: ../.. # 构建上下文为项目根目录
+      dockerfile: deployments/docker/Dockerfile # Dockerfile路径
+    ports:
+      - "8080:8080" # 端口映射，左边是主机端口，右边是容器端口
+    depends_on: # 依赖服务，确保在mysql和redis之后启动
+      - mysql
+      - redis
+    environment:
+      - TZ=Asia/Shanghai # 设置时区
+    volumes: # 挂载目录，用于配置文件和日志
+      - ../../configs:/app/configs # 配置文件挂载
+      - ../../logs:/app/logs # 日志目录挂载
+
+  # MySQL数据库服务
+  mysql:
+    image: mysql:8.0 # 使用MySQL 8.0版本
+    ports:
+      - "3306:3306" # MySQL默认端口映射
+    environment: # 环境变量配置
+      - MYSQL_ROOT_PASSWORD=root # root用户密码
+      - MYSQL_DATABASE=todo_db # 初始数据库名
+      - TZ=Asia/Shanghai # 时区设置
+    volumes:
+      - mysql_data:/var/lib/mysql # 数据持久化
+
+  # Redis缓存服务
+  redis:
+    image: redis:6.2-alpine # 使用Redis 6.2版本的alpine变体
+    ports:
+      - "6379:6379" # Redis默认端口映射
+    volumes:
+      - redis_data:/data # Redis数据持久化
+
+# 定义持久化卷
+volumes:
+  mysql_data: # MySQL数据卷
+  redis_data: # Redis数据卷

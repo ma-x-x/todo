@@ -1,0 +1,72 @@
+# API版本和资源类型
+apiVersion: apps/v1
+kind: Deployment # Deployment用于部署和管理Pod
+
+# Deployment元数据
+metadata:
+  name: todo-api # Deployment名称
+  namespace: todo-app # 所属命名空间
+
+# Deployment规格
+spec:
+  replicas: 3 # Pod副本数，确保高可用
+
+  # Pod选择器，用于识别要管理的Pod
+  selector:
+    matchLabels:
+      app: todo-api
+
+  # Pod模板
+  template:
+    metadata:
+      labels:
+        app: todo-api # Pod标签，与选择器匹配
+    spec:
+      containers:
+        - name: todo-api # 容器名称
+          image: todo-api:latest # 容器镜像
+          imagePullPolicy: IfNotPresent # 镜像拉取策略
+
+          # 容器端口
+          ports:
+            - containerPort: 8080 # 应用监听端口
+
+          # 挂载卷
+          volumeMounts:
+            - name: config # 配置文件挂载
+              mountPath: /app/configs
+            - name: logs # 日志文件挂载
+              mountPath: /app/logs
+
+          # 资源限制
+          resources:
+            requests: # 最小资源需求
+              cpu: 100m # 0.1核CPU
+              memory: 128Mi # 128MB内存
+            limits: # 最大资源限制
+              cpu: 500m # 0.5核CPU
+              memory: 512Mi # 512MB内存
+
+          # 存活探针：检查应用是否正常运行
+          livenessProbe:
+            httpGet:
+              path: /health # 健康检查接口
+              port: 8080
+            initialDelaySeconds: 30 # 首次检查等待时间
+            periodSeconds: 10 # 检查间隔
+
+          # 就绪探针：检查应用是否可以接收流量
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+      # 卷定义
+      volumes:
+        - name: config # 配置文件卷
+          configMap:
+            name: todo-config
+        - name: logs # 日志文件卷
+          emptyDir: {} # 临时存储，Pod重启后清空

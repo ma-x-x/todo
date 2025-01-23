@@ -1,0 +1,50 @@
+# 服务器基本配置
+server:
+  mode: debug # 运行模式：debug(调试模式)/release(生产模式)
+  port: 8080 # HTTP服务监听端口
+  read_timeout: 10 # 读取请求的超时时间(秒)
+  write_timeout: 10 # 写入响应的超时时间(秒)
+
+# 数据库配置
+database:
+  driver: mysql # 数据库类型：目前支持mysql
+  host: localhost # 数据库服务器地址
+  port: 3306 # MySQL默认端口
+  username: root # 数据库用户名
+  password: root # 数据库密码
+  dbname: todo_db # 数据库名称
+  max_idle_conns: 10 # 最大空闲连接数
+  max_open_conns: 100 # 最大打开连接数
+  conn_max_lifetime: 3600 # 连接最大生命周期(秒)
+
+# Redis缓存配置
+redis:
+  host: localhost # Redis服务器地址
+  port: 6379 # Redis默认端口
+  password: "" # Redis密码(如果有)
+  db: 0 # 使用的数据库编号
+
+# 日志配置
+logger:
+  level: debug # 日志级别：debug/info/warn/error
+  file: logs/app.log # 日志文件路径
+
+# JWT认证配置
+jwt:
+  secret: your-secret-key # JWT签名密钥
+  expire_hours: 24 # 令牌有效期(小时)
+  issuer: todo-api # 令牌签发者
+
+# 访问频率限制配置
+rate_limit:
+  requests_per_second: 100 # 每秒最大请求数
+  burst: 50 # 突发请求容量
+
+# 任务队列配置
+task_queue:
+  buffer_size: 1000 # 队列缓冲区大小
+  workers: 5 # 工作协程数量
+
+# 监控配置
+monitoring:
+  prometheus_port: 9090 # Prometheus监控端口

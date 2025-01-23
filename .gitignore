@@ -1,0 +1,102 @@
+# 二进制文件
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# 测试二进制文件
+*.test
+
+# 测试覆盖率文件
+*.out
+coverage.html
+
+# 依赖目录
+vendor/
+
+# IDE 配置文件
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# 环境配置文件
+.env
+.env.local
+.env.*.local
+
+# 日志文件
+/logs/*
+!logs/.gitkeep
+
+# 临时文件
+/tmp/*
+!tmp/.gitkeep
+
+# 自动生成的文件
+docs/swagger/*
+!docs/swagger/.gitkeep
+
+# 数据库文件
+*.db
+*.sqlite
+
+# 构建输出
+dist/
+build/
+
+# 调试文件
+debug/
+
+# Air 热重载临时文件
+tmp/
+.air.toml
+
+# 项目特定文件
+config.yaml.local
+config.local.yaml
+
+# Kubernetes 配置
+kubeconfig
+*.kubeconfig
+
+# Docker 相关
+.docker/
+
+# 证书文件
+*.pem
+*.crt
+*.key
+
+# 系统文件
+Thumbs.db
+
+# 测试文件
+*.test
+coverage.txt
+profile.out
+
+# 编译输出
+/bin
+/build
+/tmp
+
+# 依赖目录
+/vendor
+
+# IDE 文件
+.idea
+.vscode
+
+# 日志文件
+/logs
+
+# 配置文件
+.env
+
+# Swagger 文档
+/docs/*
+!docs/.gitkeep

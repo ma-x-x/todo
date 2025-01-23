@@ -1,0 +1,52 @@
+# API版本和资源类型
+apiVersion: v1
+kind: ConfigMap # ConfigMap用于存储非敏感的配置信息
+
+# ConfigMap元数据
+metadata:
+  name: todo-config # ConfigMap的名称
+  namespace: todo-app # 所属命名空间
+
+# 配置数据
+data:
+  # 应用主配置文件
+  config.yaml: |
+    # 服务器配置
+    server:
+      mode: production        # 运行模式：生产环境
+      port: 8080             # 服务监听端口
+      read_timeout: 10       # 读取请求超时时间(秒)
+      write_timeout: 10      # 写入响应超时时间(秒)
+
+    # 数据库配置
+    database:
+      driver: mysql          # 数据库类型
+      host: mysql           # 使用Service名称作为主机名
+      port: 3306            # MySQL默认端口
+      username: root        # 数据库用户名
+      password: root        # 数据库密码（生产环境应使用Secret）
+      dbname: todo_db       # 数据库名称
+      max_idle_conns: 10    # 最大空闲连接数
+      max_open_conns: 100   # 最大打开连接数
+      conn_max_lifetime: 3600 # 连接最大生命周期(秒)
+
+    # Redis配置
+    redis:
+      host: redis          # 使用Service名称作为主机名
+      port: 6379          # Redis默认端口
+      password: ""        # Redis密码（如需要）
+      db: 0              # 使用的数据库编号
+
+    # JWT认证配置
+    jwt:
+      secret: your_jwt_secret_key # JWT密钥（生产环境应使用Secret）
+      expire_hours: 24           # 令牌有效期(小时)
+      issuer: todo-api          # 令牌签发者
+
+    # 日志配置
+    log:
+      level: info              # 日志级别：info/debug/warn/error
+      filename: /app/logs/app.log # 日志文件路径
+      max_size: 100           # 单个日志文件最大大小(MB)
+      max_age: 30            # 日志文件保留天数
+      max_backups: 10        # 保留的旧日志文件数量

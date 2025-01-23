@@ -1,0 +1,71 @@
+# API版本和资源类型
+apiVersion: v1
+kind: PersistentVolumeClaim # 持久化卷声明
+metadata:
+  name: redis-pvc # PVC名称
+  namespace: todo-app # 所属命名空间
+spec:
+  accessModes:
+    - ReadWriteOnce # 访问模式：单节点读写
+  resources:
+    requests:
+      storage: 5Gi # 存储容量请求
+---
+# Redis服务定义
+apiVersion: v1
+kind: Service # 服务类型
+metadata:
+  name: redis # 服务名称
+  namespace: todo-app # 所属命名空间
+spec:
+  ports:
+    - port: 6379 # Redis默认端口
+  selector:
+    app: redis # 选择器：关联Redis Pod
+  clusterIP: None # 无头服务，用于StatefulSet
+---
+# Redis StatefulSet定义
+apiVersion: apps/v1
+kind: StatefulSet # 有状态应用部署
+metadata:
+  name: redis # StatefulSet名称
+  namespace: todo-app # 所属命名空间
+spec:
+  serviceName: redis # 关联服务名称
+  replicas: 1 # 副本数量
+  selector:
+    matchLabels:
+      app: redis # Pod选择器
+  template:
+    metadata:
+      labels:
+        app: redis # Pod标签
+    spec:
+      containers:
+        - name: redis # 容器名称
+          image: redis:6.2-alpine # Redis镜像版本
+          command: # 启动命令
+            - redis-server
+            - /usr/local/etc/redis/redis.conf # 使用自定义配置
+          ports:
+            - containerPort: 6379 # 容器端口
+              name: redis
+          volumeMounts:
+            - name: redis-persistent-storage # 数据持久化
+              mountPath: /data
+            - name: redis-config # 配置文件
+              mountPath: /usr/local/etc/redis
+          resources:
+            requests: # 资源请求
+              cpu: 100m # 0.1核CPU
+              memory: 128Mi # 128MB内存
+            limits: # 资源限制
+              cpu: 200m # 0.2核CPU
+              memory: 256Mi # 256MB内存
+      volumes:
+        - name: redis-persistent-storage # 持久化卷
+          persistentVolumeClaim:
+            claimName: redis-pvc # 关联PVC
+        - name: redis-config # 配置卷
+          configMap:
+            name: redis-config # 使用ConfigMap
