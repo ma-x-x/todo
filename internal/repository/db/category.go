@@ -1,3 +1,4 @@
+// Package db 提供数据库访问的具体实现
 package db
 
 import (
@@ -8,18 +9,30 @@ import (
 	"gorm.io/gorm"
 )
 
+// categoryRepository 实现分类数据库操作的结构体
 type categoryRepository struct {
 	db *gorm.DB
 }
 
+// NewCategoryRepository 创建分类仓储的实例
+// db: 数据库连接实例
+// 返回: 分类仓储实例
 func NewCategoryRepository(db *gorm.DB) *categoryRepository {
 	return &categoryRepository{db: db}
 }
 
+// Create 在数据库中创建新的分类记录
+// ctx: 上下文信息
+// category: 要创建的分类信息
+// 返回: error 创建过程中的错误信息
 func (r *categoryRepository) Create(ctx context.Context, category *models.Category) error {
 	return r.db.WithContext(ctx).Create(category).Error
 }
 
+// GetByID 根据ID从数据库获取分类信息
+// ctx: 上下文信息
+// id: 分类ID
+// 返回: (*models.Category, error) 分类信息和可能的错误
 func (r *categoryRepository) GetByID(ctx context.Context, id uint) (*models.Category, error) {
 	var category models.Category
 	if err := r.db.WithContext(ctx).First(&category, id).Error; err != nil {

@@ -50,8 +50,8 @@
 
 1. 克隆项目
 ```bash
-git clone https://github.com/yourusername/todo-demo.git
-cd todo-demo
+git clone https://github.com/ma-x-x/todo.git
+cd todo
 ```
 
 2. 配置环境

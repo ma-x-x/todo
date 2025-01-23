@@ -6,6 +6,7 @@ import (
 )
 
 // ReminderType 提醒类型
+// 定义不同的提醒周期类型
 type ReminderType int
 
 const (
@@ -15,6 +16,7 @@ const (
 )
 
 // NotifyType 通知类型
+// 定义不同的通知方式
 type NotifyType int
 
 const (
@@ -49,14 +51,14 @@ func (n NotifyType) String() string {
 }
 
 // Reminder 提醒模型
-// @Description 待办事项提醒
+// 存储待办事项的提醒信息，包括提醒时间、提醒类型和通知方式等
 type Reminder struct {
 	Base
-	TodoID     uint         `json:"todo_id" gorm:"not null"`
-	RemindAt   time.Time    `json:"remind_at" gorm:"not null"`
-	RemindType ReminderType `json:"remind_type" gorm:"type:int;not null"`
-	NotifyType NotifyType   `json:"notify_type" gorm:"type:int;not null"`
-	Status     bool         `json:"status" gorm:"default:false"` // false: 未提醒, true: 已提醒
+	TodoID     uint         `json:"todo_id" gorm:"not null"`              // 关联的待办事项ID
+	RemindAt   time.Time    `json:"remind_at" gorm:"not null"`            // 提醒时间
+	RemindType ReminderType `json:"remind_type" gorm:"type:int;not null"` // 提醒类型
+	NotifyType NotifyType   `json:"notify_type" gorm:"type:int;not null"` // 通知类型
+	Status     bool         `json:"status" gorm:"default:false"`          // 提醒状态，false表示未提醒，true表示已提醒
 }
 
 func (r ReminderType) Int() int {

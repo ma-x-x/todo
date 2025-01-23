@@ -146,7 +146,7 @@ docker network inspect [网络名]
 ## 技术支持
 
 如果遇到问题，可以：
-1. 查看项目 [Issues](https://github.com/your-repo/issues)
+1. 查看项目 [Issues](https://github.com/ma-x-x/todo/issues)
 2. 提交新的 Issue
 3. 通过 Pull Request 贡献代码
 

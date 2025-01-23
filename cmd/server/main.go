@@ -10,8 +10,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	"todo-demo/api/v1/routes"
 	_ "todo-demo/docs" // 导入swagger文档，用于API文档生成
+	routes "todo-demo/internal/router"
 	"todo-demo/internal/service"
 	"todo-demo/pkg/cache"
 	"todo-demo/pkg/config"

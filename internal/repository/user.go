@@ -1,3 +1,4 @@
+// Package repository 实现数据访问层
 package repository
 
 import (
@@ -8,14 +9,40 @@ import (
 	"gorm.io/gorm"
 )
 
+// UserRepository 定义用户仓储接口
 type UserRepository interface {
+	// Create 创建新用户
+	// ctx: 上下文信息
+	// user: 用户信息
+	// 返回: error 创建过程中的错误信息
 	Create(ctx context.Context, user *models.User) error
+
+	// GetByID 根据用户ID获取用户信息
+	// ctx: 上下文信息
+	// id: 用户ID
+	// 返回: (*models.User, error) 用户信息和可能的错误
 	GetByID(ctx context.Context, id uint) (*models.User, error)
+
+	// GetByUsername 根据用户名获取用户信息
+	// ctx: 上下文信息
+	// username: 用户名
+	// 返回: (*models.User, error) 用户信息和可能的错误
 	GetByUsername(ctx context.Context, username string) (*models.User, error)
+
+	// Update 更新用户信息
+	// ctx: 上下文信息
+	// user: 需要更新的用户信息
+	// 返回: error 更新过程中的错误信息
 	Update(ctx context.Context, user *models.User) error
+
+	// Delete 删除用户
+	// ctx: 上下文信息
+	// id: 要删除的用户ID
+	// 返回: error 删除过程中的错误信息
 	Delete(ctx context.Context, id uint) error
 }
 
+// userRepo 实现 UserRepository 接口
 type userRepo struct {
 	db *gorm.DB
 }
