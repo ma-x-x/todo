@@ -5,17 +5,16 @@ server:
   read_timeout: 10 # 读取请求的超时时间(秒)
   write_timeout: 10 # 写入响应的超时时间(秒)
 
-# 数据库配置
-database:
-  driver: mysql # 数据库类型：目前支持mysql
-  host: localhost # 数据库服务器地址
-  port: 3306 # MySQL默认端口
-  username: root # 数据库用户名
-  password: root # 数据库密码
-  dbname: todo_db # 数据库名称
-  max_idle_conns: 10 # 最大空闲连接数
-  max_open_conns: 100 # 最大打开连接数
-  conn_max_lifetime: 3600 # 连接最大生命周期(秒)
+# MySQL数据库配置
+mysql:
+  host: localhost
+  port: 3306
+  username: root
+  password: root
+  database: todo_db
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: 3600s # 使用时间单位后缀
 
 # Redis缓存配置
 redis:

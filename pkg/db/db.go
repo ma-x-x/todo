@@ -10,7 +10,7 @@ import (
 
 var db *gorm.DB
 
-func Init(cfg *config.DatabaseConfig) (*gorm.DB, error) {
+func Init(cfg *config.MySQLConfig) (*gorm.DB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		cfg.Username,
 		cfg.Password,

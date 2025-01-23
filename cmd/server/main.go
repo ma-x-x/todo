@@ -11,11 +11,12 @@ import (
 	"syscall"
 	"time"
 	_ "todo-demo/docs" // 导入swagger文档，用于API文档生成
+	"todo-demo/internal/models"
 	routes "todo-demo/internal/router"
 	"todo-demo/internal/service"
 	"todo-demo/pkg/cache"
 	"todo-demo/pkg/config"
-	"todo-demo/pkg/db"
+	"todo-demo/pkg/database"
 	"todo-demo/pkg/logger"
 	"todo-demo/pkg/middleware"
 
@@ -64,9 +65,24 @@ func run() error {
 
 	// 3. 初始化数据库连接
 	// 连接MySQL数据库，用于存储应用数据
-	db, err := db.Init(&cfg.Database)
+	db, err := database.NewMySQLDB(cfg)
 	if err != nil {
-		return fmt.Errorf("初始化数据库失败: %w", err)
+		return fmt.Errorf("Failed to connect to database: %v", err)
+	}
+
+	// 验证数据库连接
+	sqlDB, err := db.DB()
+	if err != nil {
+		return fmt.Errorf("Failed to get database instance: %v", err)
+	}
+
+	if err := sqlDB.Ping(); err != nil {
+		return fmt.Errorf("Failed to ping database: %v", err)
+	}
+
+	// 在初始化数据库连接后添加
+	if err := db.AutoMigrate(&models.User{}, &models.Todo{}, &models.Category{}, &models.Reminder{}); err != nil {
+		return fmt.Errorf("failed to migrate database: %v", err)
 	}
 
 	// 4. 初始化Redis缓存

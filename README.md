@@ -82,128 +82,83 @@ make dev
 
 ```
 todo-demo
-├── api                 # API 接口定义
-│   └── v1             # API 版本 1
-│       ├── dto        # 数据传输对象
-│       │   ├── auth        # 认证相关 DTO
-│       │   │   ├── login.go      # 登录请求/响应
-│       │   │   └── register.go   # 注册请求/响应
-│       │   ├── category    # 分类相关 DTO
-│       │   │   ├── create.go     # 创建分类
-│       │   │   ├── list.go       # 分类列表
-│       │   │   └── update.go     # 更新分类
-│       │   ├── reminder    # 提醒相关 DTO
-│       │   │   ├── create.go     # 创建提醒
-│       │   │   └── update.go     # 更新提醒
-│       │   └── todo        # 待办事项 DTO
-│       │       ├── create.go     # 创建待办
-│       │       ├── list.go       # 待办列表
-│       │       └── update.go     # 更新待办
-│       ├── handlers        # HTTP 处理器
-│       │   ├── auth.go          # 认证处理
-│       │   ├── category.go      # 分类处理
-│       │   ├── health.go        # 健康检查
-│       │   ├── reminder.go      # 提醒处理
-│       │   └── todo.go          # 待办处理
-│       └── routes          # 路由定义
-│           └── routes.go        # API 路由注册
-├── cmd                 # 主程序入口
-│   └── server         # 服务器程序
-│       └── main.go         # 主程序入口点
+├── api                 # API 接口定义和处理
+│   └── v1
+│       ├── dto        # 数据传输对象(Data Transfer Objects)
+│       │   ├── auth   # 认证相关DTO
+│       │   ├── category   # 分类相关DTO
+│       │   ├── reminder   # 提醒相关DTO
+│       │   └── todo       # 待办事项相关DTO
+│       └── handlers       # HTTP请求处理器
+├── cmd                 # 主要应用程序入口
+│   └── server         # 服务器启动入口
 ├── configs            # 配置文件目录
-│   └── config.yaml        # 应用配置文件
-├── internal          # 内部代码包
-│   ├── middleware    # 中间件
-│   │   ├── auth.go        # 认证中间件
-│   │   ├── cors.go        # 跨域中间件
-│   │   └── logger.go      # 日志中间件
-│   ├── models       # 数据模型
-│   │   ├── base.go        # 基础模型
-│   │   ├── category.go    # 分类模型
-│   │   ├── reminder.go    # 提醒模型
-│   │   ├── todo.go        # 待办模型
-│   │   └── user.go        # 用户模型
-│   ├── repository   # 数据访问层
-│   │   ├── db            # 数据库实现
-│   │   │   ├── category.go   # 分类存储
-│   │   │   ├── reminder.go   # 提醒存储
-│   │   │   ├── todo.go       # 待办存储
-│   │   │   └── user.go       # 用户存储
-│   │   ├── category.go   # 分类仓储接口
-│   │   ├── reminder.go   # 提醒仓储接口
-│   │   ├── todo.go       # 待办仓储接口
-│   │   └── user.go       # 用户仓储接口
+├── deployments        # 部署相关配置
+│   ├── docker        # Docker部署配置
+│   └── kubernetes    # Kubernetes部署配置
+├── docs              # 文档和API文档(Swagger)
+├── internal          # 私有应用程序代码
+│   ├── middleware    # HTTP中间件
+│   ├── models        # 数据模型定义
+│   ├── repository    # 数据访问层
+│   │   ├── db       # 具体数据库操作实现
+│   │   └── ...      # 仓储接口定义
 │   ├── router       # 路由配置
-│   │   └── router.go     # 主路由配置
 │   └── service      # 业务逻辑层
-│       ├── impl          # 接口实现
-│       │   ├── auth.go       # 认证服务实现
-│       │   ├── auth_test.go  # 认证测试
-│       │   ├── category.go   # 分类服务实现
-│       │   ├── reminder.go   # 提醒服务实现
-│       │   ├── todo.go       # 待办服务实现
-│       │   └── todo_test.go  # 待办测试
-│       ├── auth.go       # 认证服务接口
-│       ├── category.go   # 分类服务接口
-│       ├── reminder.go   # 提醒服务接口
-│       └── todo.go       # 待办服务接口
-├── pkg              # 公共代码包
+│       ├── impl     # 接口实现
+│       └── ...      # 服务接口定义
+├── pkg              # 可重用的库代码
 │   ├── cache        # 缓存组件
-│   │   └── redis.go      # Redis 实现
-│   ├── config      # 配置管理
-│   │   └── config.go     # 配置加载
-│   ├── database    # 数据库组件
-│   │   └── mysql.go      # MySQL 连接
-│   ├── db          # 数据库工具
-│   │   ├── db.go         # 数据库操作
-│   │   └── pool.go       # 连接池管理
-│   ├── errors      # 错误处理
-│   │   └── errors.go     # 错误定义
-│   ├── lock        # 分布式锁
-│   │   └── distributed_lock.go  # 锁实现
-│   ├── logger      # 日志组件
-│   │   └── logger.go     # 日志实现
-│   ├── middleware  # 通用中间件
-│   │   ├── cache.go      # 缓存中间件
-│   │   ├── db.go         # 数据库中间件
-│   │   ├── performance.go # 性能监控
-│   │   └── ratelimit.go  # 限流中间件
-│   ├── monitor     # 监控组件
-│   │   └── prometheus.go # 指标收集
-│   ├── queue       # 队列组件
-│   │   └── task_queue.go # 任务队列
-│   └── utils       # 工具函数
-│       └── jwt.go        # JWT 工具
-├── deployments     # 部署配置
-│   ├── docker          # Docker 部署
-│   │   ├── Dockerfile       # 容器构建
-│   │   └── docker-compose.yml  # 容器编排
-│   └── kubernetes     # K8s 部署
-│       ├── configmap.yaml    # 配置映射
-│       ├── deploy.sh         # 部署脚本
-│       ├── deployment.yaml   # 部署配置
-│       ├── grafana.yaml      # 监控面板
-│       ├── ingress.yaml      # 入口配置
-│       ├── mysql.yaml        # 数据库配置
-│       ├── prometheus.yaml   # 监控配置
-│       ├── redis-config.yaml # Redis配置
-│       ├── redis.yaml        # Redis部署
-│       ├── secret.yaml       # 密钥配置
-│       └── service.yaml      # 服务配置
-├── docs            # 文档目录
-│   ├── docs.go          # Swagger 文档
-│   ├── swagger.json     # API 文档(JSON)
-│   └── swagger.yaml     # API 文档(YAML)
-├── logs            # 日志目录
-│   └── app.log          # 应用日志
-├── DESIGN.md       # 设计文档
-├── Makefile        # 构建脚本
-├── README.md       # 项目说明
-├── START.md        # 开发指南
-├── go.mod          # Go 模块定义
-├── go.sum          # 依赖版本锁定
-└── tmp             # 临时文件目录
+│   ├── config       # 配置管理
+│   ├── database     # 数据库连接管理
+│   ├── db           # 数据库工具
+│   ├── errors       # 错误处理
+│   ├── lock         # 分布式锁
+│   ├── logger       # 日志组件
+│   ├── middleware   # 通用中间件
+│   ├── monitor      # 监控组件
+│   ├── queue        # 队列组件
+│   └── utils        # 通用工具函数
+├── logs             # 日志文件目录
+├── tmp              # 临时文件
+├── Makefile         # 项目管理命令
+├── go.mod           # Go模块定义
+└── README.md        # 项目说明文档
 ```
+
+目录结构说明：
+
+1. **api/** - API层
+   - 处理HTTP请求响应
+   - 数据验证和转换
+   - API文档定义
+
+2. **internal/** - 内部应用代码
+   - models: 核心数据模型
+   - repository: 数据访问层，处理数据持久化
+   - service: 业务逻辑层，实现核心功能
+   - middleware: 请求处理中间件
+   - router: 路由配置和管理
+
+3. **pkg/** - 公共代码包
+   - 可被外部项目引用的通用组件
+   - 基础设施代码
+   - 工具函数和助手方法
+
+4. **configs/** - 配置文件
+   - 应用配置
+   - 环境变量
+   - 部署配置
+
+5. **deployments/** - 部署配置
+   - Docker容器化配置
+   - Kubernetes编排配置
+   - 部署脚本和说明
+
+6. **docs/** - 文档
+   - API文档(Swagger)
+   - 设计文档
+   - 开发指南
 
 主要业务模块：
 
