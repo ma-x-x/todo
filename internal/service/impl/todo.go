@@ -14,8 +14,12 @@ type TodoService struct {
 }
 
 // NewTodoService 创建一个新的待办事项服务实例
-// @param todoRepo - 待办事项仓库实现
-// @return 返回待办事项服务实例
+//
+// Parameters:
+//   - todoRepo: 待办事项仓库实现
+//
+// Returns:
+//   - *TodoService: 返回待办事项服务实例
 func NewTodoService(todoRepo repository.TodoRepository) *TodoService {
 	return &TodoService{
 		todoRepo: todoRepo,
@@ -23,10 +27,15 @@ func NewTodoService(todoRepo repository.TodoRepository) *TodoService {
 }
 
 // Create 创建新的待办事项
-// @param ctx - 上下文信息
-// @param userID - 用户ID
-// @param req - 创建待办事项的请求数据
-// @return 返回新创建的待办事项ID和可能的错误
+//
+// Parameters:
+//   - ctx: 上下文信息
+//   - userID: 用户ID
+//   - req: 创建待办事项的请求数据
+//
+// Returns:
+//   - uint: 返回新创建的待办事项ID
+//   - error: 可能的错误信息
 func (s *TodoService) Create(ctx context.Context, userID uint, req *todo.CreateRequest) (uint, error) {
 	todo := &models.Todo{
 		Title:       req.Title,                     // 待办事项标题
@@ -44,16 +53,23 @@ func (s *TodoService) Create(ctx context.Context, userID uint, req *todo.CreateR
 }
 
 // GetByID 根据ID获取待办事项
-// @param ctx - 上下文信息
-// @param id - 待办事项ID
-// @param userID - 用户ID
-// @return 返回待办事项信息和可能的错误
+//
+// Parameters:
+//   - ctx: 上下文信息
+//   - id: 待办事项ID
+//   - userID: 用户ID
+//
+// Returns:
+//   - *models.Todo: 返回待办事项信息
+//   - error: 可能的错误信息
 func (s *TodoService) GetByID(ctx context.Context, id, userID uint) (*models.Todo, error) {
 	return s.todoRepo.GetByID(ctx, id)
 }
 
 // GetTodoRepo 获取待办事项仓库实例
-// @return 返回待办事项仓库接口
+//
+// Returns:
+//   - repository.TodoRepository: 返回待办事项仓库接口
 func (s *TodoService) GetTodoRepo() repository.TodoRepository {
 	return s.todoRepo
 }

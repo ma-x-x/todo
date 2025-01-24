@@ -44,7 +44,7 @@ deps:
 
 swagger:
 	@echo "Generating swagger docs..."
-	@swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal --parseDepth 3
+	@swag init -g cmd/server/main.go --parseDependency --parseInternal --parseDepth 1
 
 docker-build:
 	@docker build -t $(APP_NAME) .
