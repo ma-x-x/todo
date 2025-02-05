@@ -1,9 +1,15 @@
-.PHONY: dev build test clean deps swagger
+.PHONY: dev build test clean deps swagger init-db init-db-with-credentials
 
 # 变量定义
 APP_NAME=todo-api
 MAIN_FILE=cmd/server/main.go
 BUILD_DIR=build
+
+# 数据库配置（可以从环境变量读取）
+DB_USER ?= root
+DB_PASS ?= root
+DB_HOST ?= localhost
+DB_PORT ?= 3306
 
 dev:
 	@mkdir -p logs tmp
@@ -50,4 +56,19 @@ docker-build:
 	@docker build -t $(APP_NAME) .
 
 docker-run:
-	@docker run -p 8080:8080 $(APP_NAME) 
+	@docker run -p 8080:8080 $(APP_NAME)
+
+# 添加 init-db 命令
+init-db:
+	@echo "Initializing database..."
+	@mysql -h $(DB_HOST) -P $(DB_PORT) -u $(DB_USER) -p$(DB_PASS) < scripts/init.sql
+	@echo "Database initialization completed"
+
+# 添加一个更安全的版本，允许指定用户名和密码
+init-db-with-credentials:
+	@echo "Initializing database..."
+	@read -p "Enter MySQL username: " username; \
+	read -s -p "Enter MySQL password: " password; \
+	echo ""; \
+	mysql -u $$username -p$$password < scripts/init.sql
+	@echo "Database initialization completed" 

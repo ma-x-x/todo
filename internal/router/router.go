@@ -53,7 +53,7 @@ func InitRouter(cfg *config.Config, authService service.AuthService, todoService
 			// 待办事项管理路由组
 			todos := authorized.Group("/todos")
 			{
-				todos.POST("", handlers.CreateTodo(todoService))       // 创建待办事项
+				todos.POST("", handlers.CreateTodo(todoService, categoryService))       // 创建待办事项
 				todos.GET("", handlers.ListTodos(todoService))         // 获取待办事项列表
 				todos.GET("/:id", handlers.GetTodo(todoService))       // 获取单个待办事项
 				todos.PUT("/:id", handlers.UpdateTodo(todoService))    // 更新待办事项

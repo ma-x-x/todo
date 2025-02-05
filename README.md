@@ -62,19 +62,50 @@ cp .env.example .env
 vim .env
 ```
 
-3. 安装依赖
+3. 初始化数据库
+```bash
+# 确保 MySQL 服务已启动
+# 使用 root 用户执行初始化脚本
+mysql -u root -p < scripts/init.sql
+
+# 或者使用 make 命令初始化
+make init-db
+```
+
+4. 安装依赖
 ```bash
 make deps
 ```
 
-4. 启动开发服务器
+5. 启动开发服务器
 ```bash
 make dev
 ```
 
-5. 访问服务
-- API 服务: http://localhost:8080
-- API 文档: http://localhost:8080/swagger/index.html
+6. 访问服务
+# API 服务
+http://localhost:8080
+
+# API 文档
+http://localhost:8080/swagger/index.html
+
+# 测试 API
+# 1. 先注册用户
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"test","password":"test123","email":"test@example.com"}'
+
+# 2. 登录获取 token
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"test","password":"test123"}'
+
+# 3. 使用 token 创建待办事项
+curl -X POST http://localhost:8080/api/v1/todos \
+  -H "Authorization: Bearer <your-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"测试待办事项","description":"这是一个测试","priority":2}'
+```
 
 ## 项目结构
 

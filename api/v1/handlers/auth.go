@@ -5,6 +5,7 @@ import (
 	"todo-demo/api/v1/dto/auth"
 	"todo-demo/internal/service"
 	"todo-demo/pkg/errors"
+	"todo-demo/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,22 +25,22 @@ func Register(authService service.AuthService) gin.HandlerFunc {
 		var req auth.RegisterRequest
 
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, err.Error()))
 			return
 		}
 
 		if err := authService.Register(c.Request.Context(), &req); err != nil {
 			if err == errors.ErrUserExists {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "用户名已存在"})
+				c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, "用户名已存在"))
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "注册失败"})
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, "注册失败"))
 			return
 		}
 
-		c.JSON(http.StatusOK, auth.RegisterResponse{
+		c.JSON(http.StatusOK, response.Success(auth.RegisterResponse{
 			Message: "注册成功",
-		})
+		}))
 	}
 }
 
@@ -58,23 +59,23 @@ func Login(authService service.AuthService) gin.HandlerFunc {
 		var req auth.LoginRequest
 
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
+			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, err.Error()))
 			return
 		}
 
 		token, userInfo, err := authService.Login(c.Request.Context(), &req)
 		if err != nil {
 			if err == errors.ErrInvalidCredentials {
-				c.JSON(http.StatusUnauthorized, errors.NewError(http.StatusUnauthorized, "用户名或密码错误"))
+				c.JSON(http.StatusUnauthorized, response.Error(http.StatusUnauthorized, "用户名或密码错误"))
 				return
 			}
-			c.JSON(http.StatusInternalServerError, errors.NewError(http.StatusInternalServerError, "登录失败"))
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, "登录失败"))
 			return
 		}
 
-		c.JSON(http.StatusOK, auth.LoginResponse{
+		c.JSON(http.StatusOK, response.Success(auth.LoginResponse{
 			Token: token,
 			User:  userInfo,
-		})
+		}))
 	}
 }

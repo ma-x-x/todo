@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"todo-demo/api/v1/dto/category"
 	"todo-demo/internal/service"
-	"todo-demo/pkg/errors"
+	"todo-demo/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,20 +26,25 @@ func CreateCategory(categoryService service.CategoryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req category.CreateRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
+			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, err.Error()))
 			return
 		}
 
 		userID := c.GetUint("userID")
 		id, err := categoryService.Create(c.Request.Context(), userID, &req)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, errors.NewError(http.StatusInternalServerError, err.Error()))
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, err.Error()))
 			return
 		}
 
-		c.JSON(http.StatusOK, category.CreateResponse{
-			ID: id,
-		})
+		// 获取创建后的完整数据
+		createdCategory, err := categoryService.Get(c.Request.Context(), id, userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, "Failed to fetch created category"))
+			return
+		}
+
+		c.JSON(http.StatusOK, response.Success(createdCategory))
 	}
 }
 
@@ -57,14 +62,14 @@ func ListCategories(categoryService service.CategoryService) gin.HandlerFunc {
 		userID := c.GetUint("userID")
 		categories, err := categoryService.List(c.Request.Context(), userID)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
+			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, err.Error()))
 			return
 		}
 
-		c.JSON(http.StatusOK, category.ListResponse{
+		c.JSON(http.StatusOK, response.Success(category.ListResponse{
 			Total: int64(len(categories)),
 			Items: categories,
-		})
+		}))
 	}
 }
 
@@ -85,23 +90,30 @@ func UpdateCategory(categoryService service.CategoryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req category.UpdateRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
+			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, err.Error()))
 			return
 		}
 
 		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, "Invalid ID"))
+			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, "Invalid ID"))
 			return
 		}
 
 		userID := c.GetUint("userID")
 		if err := categoryService.Update(c.Request.Context(), uint(id), userID, &req); err != nil {
-			c.JSON(http.StatusInternalServerError, errors.NewError(http.StatusInternalServerError, err.Error()))
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, err.Error()))
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "Category updated successfully"})
+		// 获取更新后的完整数据
+		updatedCategory, err := categoryService.Get(c.Request.Context(), uint(id), userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, "Failed to fetch updated category"))
+			return
+		}
+
+		c.JSON(http.StatusOK, response.Success(updatedCategory))
 	}
 }
 
@@ -121,18 +133,18 @@ func DeleteCategory(categoryService service.CategoryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, "Invalid ID"))
+			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, "Invalid ID"))
 			return
 		}
 
 		userID := c.GetUint("userID")
 		if err := categoryService.Delete(c.Request.Context(), uint(id), userID); err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, err.Error()))
 			return
 		}
 
-		c.JSON(http.StatusOK, category.UpdateResponse{
+		c.JSON(http.StatusOK, response.Success(category.UpdateResponse{
 			Message: "Category deleted successfully",
-		})
+		}))
 	}
 }

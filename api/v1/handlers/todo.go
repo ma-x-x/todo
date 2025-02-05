@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"todo-demo/api/v1/dto/todo"
 	"todo-demo/internal/service"
-	"todo-demo/pkg/errors"
+	"todo-demo/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,22 +22,43 @@ import (
 // @Failure 400 {object} errors.Error "参数验证失败或业务错误"
 // @Failure 401 {object} errors.Error "未授权访问"
 // @Router /todos [post]
-func CreateTodo(todoService service.TodoService) gin.HandlerFunc {
+func CreateTodo(todoService service.TodoService, categoryService service.CategoryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req todo.CreateRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
+			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, err.Error()))
 			return
+		}
+
+		// 如果提供了 CategoryID，先验证分类是否存在
+		if req.CategoryID != nil {
+			// 验证分类是否存在且属于当前用户
+			category, err := categoryService.Get(c.Request.Context(), *req.CategoryID, c.GetUint("userID"))
+			if err != nil {
+				c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, "Invalid category ID"))
+				return
+			}
+			if category.UserID != c.GetUint("userID") {
+				c.JSON(http.StatusForbidden, response.Error(http.StatusForbidden, "Category does not belong to user"))
+				return
+			}
 		}
 
 		userID := c.GetUint("userID")
 		id, err := todoService.Create(c.Request.Context(), userID, &req)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, errors.NewError(http.StatusInternalServerError, err.Error()))
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, err.Error()))
 			return
 		}
 
-		c.JSON(http.StatusOK, todo.CreateResponse{ID: id})
+		// 获取创建后的完整数据
+		createdTodo, err := todoService.Get(c.Request.Context(), id, userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, "Failed to fetch created todo"))
+			return
+		}
+
+		c.JSON(http.StatusOK, response.Success(createdTodo))
 	}
 }
 
@@ -55,14 +76,14 @@ func ListTodos(todoService service.TodoService) gin.HandlerFunc {
 		userID := c.GetUint("userID")
 		todos, err := todoService.List(c.Request.Context(), userID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, errors.NewError(http.StatusInternalServerError, err.Error()))
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, err.Error()))
 			return
 		}
 
-		c.JSON(http.StatusOK, todo.ListResponse{
+		c.JSON(http.StatusOK, response.Success(todo.ListResponse{
 			Total: int64(len(todos)),
 			Items: todos,
-		})
+		}))
 	}
 }
 
@@ -81,18 +102,20 @@ func GetTodo(todoService service.TodoService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, "Invalid ID"))
+			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, "Invalid ID"))
 			return
 		}
 
 		userID := c.GetUint("userID")
-		todo, err := todoService.Get(c.Request.Context(), uint(id), userID)
+		todoItem, err := todoService.Get(c.Request.Context(), uint(id), userID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, errors.NewError(http.StatusInternalServerError, err.Error()))
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, err.Error()))
 			return
 		}
 
-		c.JSON(http.StatusOK, todo)
+		c.JSON(http.StatusOK, response.Success(todo.DetailResponse{
+			Todo: todoItem,
+		}))
 	}
 }
 
@@ -112,25 +135,30 @@ func UpdateTodo(todoService service.TodoService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req todo.UpdateRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
+			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, err.Error()))
 			return
 		}
 
 		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, "Invalid ID"))
+			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, "Invalid ID"))
 			return
 		}
 
 		userID := c.GetUint("userID")
 		if err := todoService.Update(c.Request.Context(), uint(id), userID, &req); err != nil {
-			c.JSON(http.StatusInternalServerError, errors.NewError(http.StatusInternalServerError, err.Error()))
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, err.Error()))
 			return
 		}
 
-		c.JSON(http.StatusOK, todo.UpdateResponse{
-			Message: "Todo updated successfully",
-		})
+		// 获取更新后的完整数据
+		updatedTodo, err := todoService.Get(c.Request.Context(), uint(id), userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, "Failed to fetch updated todo"))
+			return
+		}
+
+		c.JSON(http.StatusOK, response.Success(updatedTodo))
 	}
 }
 
@@ -149,18 +177,18 @@ func DeleteTodo(todoService service.TodoService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, "Invalid ID"))
+			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, "Invalid ID"))
 			return
 		}
 
 		userID := c.GetUint("userID")
 		if err := todoService.Delete(c.Request.Context(), uint(id), userID); err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, err.Error()))
 			return
 		}
 
-		c.JSON(http.StatusOK, todo.UpdateResponse{
+		c.JSON(http.StatusOK, response.Success(todo.UpdateResponse{
 			Message: "Todo deleted successfully",
-		})
+		}))
 	}
 }
