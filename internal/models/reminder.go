@@ -10,9 +10,9 @@ import (
 type ReminderType int
 
 const (
-	ReminderTypeOnce   ReminderType = iota + 1 // 一次性提醒
-	ReminderTypeDaily                          // 每日提醒
-	ReminderTypeWeekly                         // 每周提醒
+	ReminderTypeOnce   ReminderType = 1 // 一次性提醒
+	ReminderTypeDaily  ReminderType = 2 // 每日提醒
+	ReminderTypeWeekly ReminderType = 3 // 每周提醒
 )
 
 // NotifyType 通知类型
@@ -20,8 +20,8 @@ const (
 type NotifyType int
 
 const (
-	NotifyTypeEmail NotifyType = iota + 1 // 邮件通知
-	NotifyTypePush                        // 推送通知
+	NotifyTypeEmail NotifyType = 1 // 邮件通知
+	NotifyTypePush  NotifyType = 2 // 推送通知
 )
 
 // String 方法用于将 ReminderType 转换为字符串
@@ -69,7 +69,7 @@ func (n NotifyType) Int() int {
 	return int(n)
 }
 
-// ParseReminderType 从字符串解析提醒类型
+// ParseReminderType 将字符串转换为提醒类型
 func ParseReminderType(s string) (ReminderType, error) {
 	switch s {
 	case "once":
@@ -83,7 +83,7 @@ func ParseReminderType(s string) (ReminderType, error) {
 	}
 }
 
-// ParseNotifyType 从字符串解析通知类型
+// ParseNotifyType 将字符串转换为通知类型
 func ParseNotifyType(s string) (NotifyType, error) {
 	switch s {
 	case "email":

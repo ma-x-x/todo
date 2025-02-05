@@ -31,14 +31,14 @@ func CreateCategory(categoryService service.CategoryService) gin.HandlerFunc {
 		}
 
 		userID := c.GetUint("userID")
-		result, err := categoryService.Create(c.Request.Context(), userID, req.Name, req.Color)
+		id, err := categoryService.Create(c.Request.Context(), userID, &req)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
+			c.JSON(http.StatusInternalServerError, errors.NewError(http.StatusInternalServerError, err.Error()))
 			return
 		}
 
 		c.JSON(http.StatusOK, category.CreateResponse{
-			Category: result,
+			ID: id,
 		})
 	}
 }
@@ -83,27 +83,25 @@ func ListCategories(categoryService service.CategoryService) gin.HandlerFunc {
 // @Router /categories/{id} [put]
 func UpdateCategory(categoryService service.CategoryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, "Invalid ID"))
-			return
-		}
-
 		var req category.UpdateRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
 			return
 		}
 
-		userID := c.GetUint("userID")
-		if err := categoryService.Update(c.Request.Context(), uint(id), userID, *req.Name, *req.Color); err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
+		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, "Invalid ID"))
 			return
 		}
 
-		c.JSON(http.StatusOK, category.UpdateResponse{
-			Message: "Category updated successfully",
-		})
+		userID := c.GetUint("userID")
+		if err := categoryService.Update(c.Request.Context(), uint(id), userID, &req); err != nil {
+			c.JSON(http.StatusInternalServerError, errors.NewError(http.StatusInternalServerError, err.Error()))
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Category updated successfully"})
 	}
 }
 

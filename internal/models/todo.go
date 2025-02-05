@@ -19,9 +19,9 @@ type Todo struct {
 	Description string     `json:"description" gorm:"size:1024"`                    // 待办事项描述，不超过1024字符
 	Completed   bool       `json:"completed" gorm:"default:false"`                  // 完成状态，默认为未完成
 	Priority    Priority   `json:"priority" gorm:"default:2"`                       // 优先级，默认为中优先级
-	UserID      uint       `json:"user_id" gorm:"not null"`                         // 所属用户ID
+	UserID      uint       `json:"userId" gorm:"not null;column:user_id"`             // 所属用户ID
 	User        User       `gorm:"foreignKey:UserID" json:"-"`                      // 关联的用户信息，json序列化时忽略
-	CategoryID  *uint      `json:"category_id" gorm:"default:null"`                 // 所属分类ID，允许为空
+	CategoryID  *uint      `json:"categoryId" gorm:"column:category_id"`                 // 所属分类ID，允许为空
 	Category    *Category  `json:"category,omitempty" gorm:"foreignKey:CategoryID"` // 关联的分类信息
 	Reminders   []Reminder `json:"reminders,omitempty" gorm:"foreignKey:TodoID"`    // 关联的提醒列表
 }

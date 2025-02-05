@@ -45,12 +45,12 @@ func Register(authService service.AuthService) gin.HandlerFunc {
 
 // Login 用户登录处理器
 // @Summary 用户登录
-// @Description 验证用户凭证并生成JWT令牌，用于后续请求的身份验证
+// @Description 验证用户凭证并生成JWT令牌，返回令牌和用户信息
 // @Tags auth
 // @Accept json
 // @Produce json
 // @Param request body auth.LoginRequest true "登录信息，包含用户名和密码"
-// @Success 200 {object} auth.LoginResponse "登录成功返回的JWT令牌"
+// @Success 200 {object} auth.LoginResponse "登录成功返回的JWT令牌和用户信息"
 // @Failure 401 {object} errors.Error "用户名或密码错误等认证失败的情况"
 // @Router /auth/login [post]
 func Login(authService service.AuthService) gin.HandlerFunc {
@@ -58,22 +58,23 @@ func Login(authService service.AuthService) gin.HandlerFunc {
 		var req auth.LoginRequest
 
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
 			return
 		}
 
-		token, err := authService.Login(c.Request.Context(), &req)
+		token, userInfo, err := authService.Login(c.Request.Context(), &req)
 		if err != nil {
 			if err == errors.ErrInvalidCredentials {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
+				c.JSON(http.StatusUnauthorized, errors.NewError(http.StatusUnauthorized, "用户名或密码错误"))
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "登录失败"})
+			c.JSON(http.StatusInternalServerError, errors.NewError(http.StatusInternalServerError, "登录失败"))
 			return
 		}
 
 		c.JSON(http.StatusOK, auth.LoginResponse{
 			Token: token,
+			User:  userInfo,
 		})
 	}
 }

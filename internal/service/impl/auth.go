@@ -49,21 +49,35 @@ func (s *authService) Register(ctx context.Context, req *auth.RegisterRequest) e
 }
 
 // Login 实现用户登录逻辑
-func (s *authService) Login(ctx context.Context, req *auth.LoginRequest) (string, error) {
+func (s *authService) Login(ctx context.Context, req *auth.LoginRequest) (string, *auth.UserInfo, error) {
 	// 获取用户信息
 	user, err := s.userRepo.GetByUsername(ctx, req.Username)
 	if err != nil {
 		if err == errors.ErrUserNotFound {
-			return "", errors.ErrInvalidCredentials
+			return "", nil, errors.ErrInvalidCredentials
 		}
-		return "", err
+		return "", nil, err
 	}
 
 	// 验证密码
 	if !user.CheckPassword(req.Password) {
-		return "", errors.ErrInvalidCredentials
+		return "", nil, errors.ErrInvalidCredentials
 	}
 
 	// 生成JWT令牌
-	return utils.GenerateToken(user.ID, s.jwtCfg)
+	token, err := utils.GenerateToken(user.ID, s.jwtCfg)
+	if err != nil {
+		return "", nil, err
+	}
+
+	// 构造用户信息
+	userInfo := &auth.UserInfo{
+		ID:        user.ID,
+		Username:  user.Username,
+		Email:     user.Email,
+		CreatedAt: user.CreatedAt.Format("2006-01-02 15:04:05"),  // 格式化时间
+		UpdatedAt: user.UpdatedAt.Format("2006-01-02 15:04:05"),  // 格式化时间
+	}
+
+	return token, userInfo, nil
 }

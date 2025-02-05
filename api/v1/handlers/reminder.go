@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strconv"
 	"todo-demo/api/v1/dto/reminder"
-	"todo-demo/internal/models"
 	"todo-demo/internal/service"
 	"todo-demo/pkg/errors"
 
@@ -31,35 +30,15 @@ func CreateReminder(reminderService service.ReminderService) gin.HandlerFunc {
 			return
 		}
 
-		// 验证请求参数
-		if err := req.Validate(); err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
-			return
-		}
-
-		// 转换提醒类型和通知类型
-		reminderType, err := models.ParseReminderType(req.RemindType)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
-			return
-		}
-
-		notifyType, err := models.ParseNotifyType(req.NotifyType)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
-			return
-		}
-
 		userID := c.GetUint("userID")
-		reminderModel, err := reminderService.Create(c.Request.Context(), userID, req.TodoID, req.RemindAt,
-			reminderType, notifyType)
+		id, err := reminderService.Create(c.Request.Context(), userID, &req)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
+			c.JSON(http.StatusInternalServerError, errors.NewError(http.StatusInternalServerError, err.Error()))
 			return
 		}
 
 		c.JSON(http.StatusOK, reminder.CreateResponse{
-			Reminder: reminderModel,
+			ID: id,
 		})
 	}
 }
@@ -83,15 +62,15 @@ func ListReminders(reminderService service.ReminderService) gin.HandlerFunc {
 			return
 		}
 
-		reminders, err := reminderService.List(c.Request.Context(), uint(todoID))
+		reminders, err := reminderService.ListByTodoID(c.Request.Context(), uint(todoID))
 		if err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
+			c.JSON(http.StatusInternalServerError, errors.NewError(http.StatusInternalServerError, err.Error()))
 			return
 		}
 
 		c.JSON(http.StatusOK, reminder.ListResponse{
-			Total:     int64(len(reminders)),
-			Reminders: reminders,
+			Items: reminders,
+			Total: int64(len(reminders)),
 		})
 	}
 }
@@ -110,46 +89,25 @@ func ListReminders(reminderService service.ReminderService) gin.HandlerFunc {
 // @Router /reminders/{id} [put]
 func UpdateReminder(reminderService service.ReminderService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, "Invalid ID"))
-			return
-		}
-
 		var req reminder.UpdateRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
 			return
 		}
 
-		// 验证请求参数
-		if err := req.Validate(); err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
-			return
-		}
-
-		// 转换提醒类型和通知类型
-		reminderType, err := models.ParseReminderType(req.RemindType)
+		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
+			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, "Invalid ID"))
 			return
 		}
 
-		notifyType, err := models.ParseNotifyType(req.NotifyType)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
+		userID := c.GetUint("userID")
+		if err := reminderService.Update(c.Request.Context(), uint(id), userID, &req); err != nil {
+			c.JSON(http.StatusInternalServerError, errors.NewError(http.StatusInternalServerError, err.Error()))
 			return
 		}
 
-		if err := reminderService.Update(c.Request.Context(), uint(id), req.RemindAt,
-			reminderType, notifyType); err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
-			return
-		}
-
-		c.JSON(http.StatusOK, reminder.UpdateResponse{
-			Message: "Reminder updated successfully",
-		})
+		c.JSON(http.StatusOK, gin.H{"message": "Reminder updated successfully"})
 	}
 }
 
@@ -172,13 +130,12 @@ func DeleteReminder(reminderService service.ReminderService) gin.HandlerFunc {
 			return
 		}
 
-		if err := reminderService.Delete(c.Request.Context(), uint(id)); err != nil {
-			c.JSON(http.StatusBadRequest, errors.NewError(http.StatusBadRequest, err.Error()))
+		userID := c.GetUint("userID")
+		if err := reminderService.Delete(c.Request.Context(), uint(id), userID); err != nil {
+			c.JSON(http.StatusInternalServerError, errors.NewError(http.StatusInternalServerError, err.Error()))
 			return
 		}
 
-		c.JSON(http.StatusOK, reminder.UpdateResponse{
-			Message: "Reminder deleted successfully",
-		})
+		c.JSON(http.StatusOK, gin.H{"message": "Reminder deleted successfully"})
 	}
 }

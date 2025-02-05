@@ -8,23 +8,20 @@ import (
 	"todo-demo/pkg/errors"
 )
 
-// CategoryService 分类服务结构体
-// 负责处理所有与分类相关的业务逻辑
+// CategoryService 分类服务实现
 type CategoryService struct {
-	categoryRepo repository.CategoryRepository // 分类数据仓库接口
+	categoryRepo repository.CategoryRepository
 }
 
 // NewCategoryService 创建一个新的分类服务实例
 //
 // Parameters:
-//   - categoryRepo: 分类仓库实现
+//   - repo: 分类仓库实现
 //
 // Returns:
 //   - *CategoryService: 返回分类服务实例
-func NewCategoryService(categoryRepo repository.CategoryRepository) *CategoryService {
-	return &CategoryService{
-		categoryRepo: categoryRepo,
-	}
+func NewCategoryService(repo repository.CategoryRepository) *CategoryService {
+	return &CategoryService{categoryRepo: repo}
 }
 
 // Create 创建新的分类
@@ -51,18 +48,18 @@ func (s *CategoryService) Create(ctx context.Context, userID uint, req *category
 	return category.ID, nil
 }
 
-// GetByID 根据ID获取分类信息
+// Get 根据ID获取分类信息
 //
 // Parameters:
 //   - ctx: 上下文信息
+//   - id: 分类ID
 //   - userID: 用户ID
-//   - categoryID: 分类ID
 //
 // Returns:
 //   - *models.Category: 返回分类信息
 //   - error: 可能的错误信息
-func (s *CategoryService) GetByID(ctx context.Context, userID, categoryID uint) (*models.Category, error) {
-	category, err := s.categoryRepo.GetByID(ctx, categoryID)
+func (s *CategoryService) Get(ctx context.Context, id, userID uint) (*models.Category, error) {
+	category, err := s.categoryRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +96,7 @@ func (s *CategoryService) List(ctx context.Context, userID uint) ([]*models.Cate
 // Returns:
 //   - error: 可能的错误信息
 func (s *CategoryService) Update(ctx context.Context, userID, categoryID uint, req *category.UpdateRequest) error {
-	category, err := s.GetByID(ctx, userID, categoryID)
+	category, err := s.Get(ctx, categoryID, userID)
 	if err != nil {
 		return err
 	}
@@ -125,7 +122,7 @@ func (s *CategoryService) Update(ctx context.Context, userID, categoryID uint, r
 // Returns:
 //   - error: 可能的错误信息
 func (s *CategoryService) Delete(ctx context.Context, userID, categoryID uint) error {
-	category, err := s.GetByID(ctx, userID, categoryID)
+	category, err := s.Get(ctx, categoryID, userID)
 	if err != nil {
 		return err
 	}

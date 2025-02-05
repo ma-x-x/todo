@@ -16,6 +16,6 @@ type AuthService interface {
 	// Login 用户登录
 	// ctx: 上下文信息
 	// req: 登录请求，包含用户名和密码
-	// 返回JWT令牌和错误信息
-	Login(ctx context.Context, req *auth.LoginRequest) (string, error)
+	// 返回JWT令牌、用户信息和可能的错误
+	Login(ctx context.Context, req *auth.LoginRequest) (string, *auth.UserInfo, error)
 }

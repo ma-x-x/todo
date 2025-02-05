@@ -5,6 +5,7 @@ import (
 	"todo-demo/api/v1/dto/todo"
 	"todo-demo/internal/models"
 	"todo-demo/internal/repository"
+	"todo-demo/pkg/errors"
 )
 
 // TodoService 待办事项服务结构体
@@ -40,7 +41,7 @@ func (s *TodoService) Create(ctx context.Context, userID uint, req *todo.CreateR
 	todo := &models.Todo{
 		Title:       req.Title,                     // 待办事项标题
 		Description: req.Description,               // 待办事项描述
-		Priority:    models.Priority(req.Priority), // 优先级
+		Priority:    models.Priority(req.Priority), // 设置优先级
 		UserID:      userID,                        // 所属用户ID
 		CategoryID:  req.CategoryID,                // 所属分类ID
 	}
@@ -52,18 +53,65 @@ func (s *TodoService) Create(ctx context.Context, userID uint, req *todo.CreateR
 	return todo.ID, nil
 }
 
-// GetByID 根据ID获取待办事项
-//
-// Parameters:
-//   - ctx: 上下文信息
-//   - id: 待办事项ID
-//   - userID: 用户ID
-//
-// Returns:
-//   - *models.Todo: 返回待办事项信息
-//   - error: 可能的错误信息
-func (s *TodoService) GetByID(ctx context.Context, id, userID uint) (*models.Todo, error) {
-	return s.todoRepo.GetByID(ctx, id)
+// List 获取用户的所有待办事项
+func (s *TodoService) List(ctx context.Context, userID uint) ([]*models.Todo, error) {
+	// 默认分页参数
+	page := 1
+	pageSize := 100
+	todos, _, err := s.todoRepo.ListByUserID(ctx, userID, page, pageSize)
+	return todos, err
+}
+
+// Get 获取单个待办事项详情
+func (s *TodoService) Get(ctx context.Context, id, userID uint) (*models.Todo, error) {
+	todo, err := s.todoRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	
+	// 验证所有权
+	if todo.UserID != userID {
+		return nil, errors.ErrForbidden
+	}
+	
+	return todo, nil
+}
+
+// Update 更新待办事项
+func (s *TodoService) Update(ctx context.Context, id, userID uint, req *todo.UpdateRequest) error {
+	todo, err := s.Get(ctx, id, userID)
+	if err != nil {
+		return err
+	}
+
+	// 更新提供的字段
+	if req.Title != nil {
+		todo.Title = *req.Title
+	}
+	if req.Description != nil {
+		todo.Description = *req.Description
+	}
+	if req.Priority != nil {
+		todo.Priority = models.Priority(*req.Priority)
+	}
+	if req.Completed != nil {
+		todo.Completed = *req.Completed
+	}
+	if req.CategoryID != nil {
+		todo.CategoryID = req.CategoryID
+	}
+
+	return s.todoRepo.Update(ctx, todo)
+}
+
+// Delete 删除待办事项
+func (s *TodoService) Delete(ctx context.Context, id, userID uint) error {
+	todo, err := s.Get(ctx, id, userID)
+	if err != nil {
+		return err
+	}
+
+	return s.todoRepo.Delete(ctx, todo.ID)
 }
 
 // GetTodoRepo 获取待办事项仓库实例

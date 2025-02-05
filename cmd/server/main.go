@@ -119,7 +119,7 @@ func run() error {
 
 	// 在后台启动服务器
 	go func() {
-		log.Printf("服务器正在启动，监听端口%s", srv.Addr)
+		log.Printf("服务器正在启动，地址：http://localhost:%d", cfg.Server.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("监听失败: %v", err)
 		}

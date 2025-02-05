@@ -2,7 +2,7 @@ package todo
 
 import "todo-demo/internal/models"
 
-// ListResponse 待办事项列表的响应
+// ListResponse 待办事项列表响应
 type ListResponse struct {
 	// 总记录数
 	// 用于前端分页显示

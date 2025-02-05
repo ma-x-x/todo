@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// TodoRepository 定义待办事项仓储接口
+// TodoRepository 待办事项仓库接口
 type TodoRepository interface {
 	// Create 创建新的待办事项
 	// ctx: 上下文信息
