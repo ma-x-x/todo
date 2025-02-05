@@ -55,3 +55,28 @@ func NewError(code int, message string, detail ...string) *Error {
 	}
 	return err
 }
+
+// ErrorCode 定义错误码类型
+type ErrorCode int
+
+const (
+	// 系统级错误码
+	ErrSystemCode ErrorCode = iota + 10000
+	ErrDatabaseCode
+	ErrCacheCode
+	
+	// 业务级错误码
+	ErrInvalidAuthCode ErrorCode = iota + 20000
+	ErrUserNotFoundCode
+	ErrTodoNotFoundCode
+)
+
+// 将错误码映射到错误信息
+var errorMessages = map[ErrorCode]string{
+	ErrSystemCode:       "系统错误",
+	ErrDatabaseCode:     "数据库错误",
+	ErrCacheCode:        "缓存错误",
+	ErrInvalidAuthCode:  "认证失败",
+	ErrUserNotFoundCode: "用户不存在",
+	ErrTodoNotFoundCode: "待办事项不存在",
+}

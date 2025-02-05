@@ -1,6 +1,7 @@
+// Package auth provides data transfer objects for authentication related operations
 package auth
 
-// LoginRequest 登录请求
+// LoginRequest represents the login request payload
 type LoginRequest struct {
 	// Username 用户名
 	Username string `json:"username" binding:"required"`

@@ -13,7 +13,7 @@ import (
 // authService 实现认证服务接口
 type authService struct {
 	userRepo repository.UserRepository // 用户数据访问接口
-	jwtCfg   *config.JWTConfig         // JWT配置信息
+	jwtCfg   *config.JWTConfig         // 建议改为 jwtConfig
 }
 
 // NewAuthService 创建认证服务实例

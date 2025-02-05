@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"todo-demo/pkg/config"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -67,4 +68,14 @@ func Error() *zerolog.Event {
 // Fatal 输出致命错误日志
 func Fatal() *zerolog.Event {
 	return log.Fatal()
+}
+
+func LogRequest(traceID string, method string, path string, status int, latency time.Duration) {
+	log.Info().
+		Str("trace_id", traceID).
+		Str("method", method).
+		Str("path", path).
+		Int("status", status).
+		Dur("latency", latency).
+		Msg("HTTP Request")
 }

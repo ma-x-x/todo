@@ -68,6 +68,8 @@ type Config struct {
 
 // LoadConfig 加载配置文件
 func LoadConfig() (*Config, error) {
+	viper.AutomaticEnv()
+	viper.SetEnvPrefix("APP")
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("./configs")
