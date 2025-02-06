@@ -47,11 +47,19 @@ CREATE TABLE IF NOT EXISTS reminders (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     todo_id BIGINT UNSIGNED NOT NULL,
     remind_at TIMESTAMP NOT NULL,
-    remind_type TINYINT NOT NULL,
-    notify_type TINYINT NOT NULL,
+    remind_type VARCHAR(10) NOT NULL COMMENT 'once/daily/weekly',
+    notify_type VARCHAR(10) NOT NULL COMMENT 'email/push',
     status BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP NULL,
-    CONSTRAINT fk_reminders_todo FOREIGN KEY (todo_id) REFERENCES todos(id)
-); 
+    CONSTRAINT fk_reminders_todo FOREIGN KEY (todo_id) REFERENCES todos(id),
+    CONSTRAINT chk_remind_type CHECK (remind_type IN ('once', 'daily', 'weekly')),
+    CONSTRAINT chk_notify_type CHECK (notify_type IN ('email', 'push'))
+);
+
+-- 添加索引
+CREATE INDEX idx_reminders_todo_id ON reminders(todo_id);
+CREATE INDEX idx_reminders_remind_at ON reminders(remind_at);
+CREATE INDEX idx_reminders_todo_remind ON reminders(todo_id, deleted_at);
+CREATE INDEX idx_reminders_remind_status ON reminders(remind_at, status, deleted_at); 

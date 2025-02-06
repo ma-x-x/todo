@@ -1,6 +1,9 @@
 package reminder
 
-import "time"
+import (
+	"time"
+	"todo-demo/internal/models"
+)
 
 // CreateRequest 创建提醒请求
 type CreateRequest struct {
@@ -12,5 +15,12 @@ type CreateRequest struct {
 
 // CreateResponse 创建提醒响应
 type CreateResponse struct {
-	ID uint `json:"id"`
+	ID         uint           `json:"id"`
+	TodoID     uint           `json:"todoId"`
+	RemindAt   time.Time      `json:"remindAt"`
+	RemindType string         `json:"remindType"`
+	NotifyType string         `json:"notifyType"`
+	CreatedAt  time.Time      `json:"createdAt"`
+	Todo       *models.Todo     `json:"todo"`      // 关联的待办事项信息
+	Reminder   *models.Reminder `json:"reminder"`  // 提醒详细信息
 }

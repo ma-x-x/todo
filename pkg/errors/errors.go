@@ -18,6 +18,7 @@ var (
 	// 权限相关错误
 	ErrUnauthorized = errors.New("未经授权的访问")
 	ErrForbidden    = errors.New("禁止访问")
+	ErrNoPermission = errors.New("无权限访问")
 
 	// 数据验证错误
 	ErrInvalidInput     = errors.New("无效的输入")
@@ -26,6 +27,11 @@ var (
 	// 数据库相关错误
 	ErrDBConnection = errors.New("数据库连接失败")
 	ErrDBQuery      = errors.New("数据库查询失败")
+
+	// ErrNotFound 未找到记录
+	ErrNotFound = errors.New("record not found")
+	// ErrInvalidParam 无效的参数
+	ErrInvalidParam = errors.New("invalid parameter")
 )
 
 // Error 错误响应结构体

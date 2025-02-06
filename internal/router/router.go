@@ -72,7 +72,7 @@ func InitRouter(cfg *config.Config, authService service.AuthService, todoService
 			// 提醒管理路由组
 			reminders := authorized.Group("/reminders")
 			{
-				reminders.POST("", handlers.CreateReminder(reminderService))             // 创建提醒
+				reminders.POST("", handlers.CreateReminder(reminderService, todoService))             // 创建提醒
 				reminders.GET("/todo/:todo_id", handlers.ListReminders(reminderService)) // 获取待办事项的提醒列表
 				reminders.PUT("/:id", handlers.UpdateReminder(reminderService))          // 更新提醒
 				reminders.DELETE("/:id", handlers.DeleteReminder(reminderService))       // 删除提醒

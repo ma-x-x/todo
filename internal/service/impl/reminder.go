@@ -22,28 +22,33 @@ func NewReminderService(reminderRepo repository.ReminderRepository, todoRepo rep
 }
 
 func (s *ReminderService) Create(ctx context.Context, userID uint, req *reminder.CreateRequest) (uint, error) {
-	// 转换提醒类型
-	reminderType, err := models.ParseReminderType(req.RemindType)
+	// 验证待办事项是否存在且属于当前用户
+	todo, err := s.todoRepo.GetByID(ctx, req.TodoID)
 	if err != nil {
 		return 0, err
 	}
-
-	// 转换通知类型
-	notifyType, err := models.ParseNotifyType(req.NotifyType)
-	if err != nil {
-		return 0, err
+	if todo.UserID != userID {
+		return 0, errors.ErrNoPermission
 	}
 
+	// 创建提醒
 	reminder := &models.Reminder{
 		TodoID:     req.TodoID,
 		RemindAt:   req.RemindAt,
-		RemindType: reminderType,
-		NotifyType: notifyType,
+		RemindType: req.RemindType,
+		NotifyType: req.NotifyType,
+		Status:     false,
+	}
+
+	// 验证提醒数据
+	if err := reminder.Validate(); err != nil {
+		return 0, err
 	}
 
 	if err := s.reminderRepo.Create(ctx, reminder); err != nil {
 		return 0, err
 	}
+
 	return reminder.ID, nil
 }
 
@@ -72,28 +77,32 @@ func (s *ReminderService) GetReminderRepo() repository.ReminderRepository {
 }
 
 func (s *ReminderService) Update(ctx context.Context, id, userID uint, req *reminder.UpdateRequest) error {
-	reminder, err := s.Get(ctx, id, userID)
+	// 获取提醒
+	r, err := s.reminderRepo.GetByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	// 转换提醒类型
-	reminderType, err := models.ParseReminderType(req.RemindType)
+	// 验证待办事项是否属于当前用户
+	todo, err := s.todoRepo.GetByID(ctx, r.TodoID)
 	if err != nil {
 		return err
 	}
+	if todo.UserID != userID {
+		return errors.ErrNoPermission
+	}
 
-	// 转换通知类型
-	notifyType, err := models.ParseNotifyType(req.NotifyType)
-	if err != nil {
+	// 更新提醒信息
+	r.RemindAt = req.RemindAt
+	r.RemindType = req.RemindType
+	r.NotifyType = req.NotifyType
+
+	// 验证提醒数据
+	if err := r.Validate(); err != nil {
 		return err
 	}
 
-	reminder.RemindAt = req.RemindAt
-	reminder.RemindType = reminderType
-	reminder.NotifyType = notifyType
-
-	return s.reminderRepo.Update(ctx, reminder)
+	return s.reminderRepo.Update(ctx, r)
 }
 
 func (s *ReminderService) Delete(ctx context.Context, id, userID uint) error {

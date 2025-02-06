@@ -22,7 +22,7 @@ import (
 // @Failure 400 {object} response.Response "参数验证失败或业务错误"
 // @Failure 401 {object} response.Response "未授权访问"
 // @Router /reminders [post]
-func CreateReminder(reminderService service.ReminderService) gin.HandlerFunc {
+func CreateReminder(reminderService service.ReminderService, todoService service.TodoService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req reminder.CreateRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -37,14 +37,32 @@ func CreateReminder(reminderService service.ReminderService) gin.HandlerFunc {
 			return
 		}
 
-		// 获取创建后的完整数据
+		// 获取创建后的完整提醒信息
 		createdReminder, err := reminderService.Get(c.Request.Context(), id, userID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, "Failed to fetch created reminder"))
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, "获取创建的提醒失败"))
 			return
 		}
 
-		c.JSON(http.StatusOK, response.Success(createdReminder))
+		// 获取关联的待办事项信息
+		todo, err := todoService.Get(c.Request.Context(), req.TodoID, userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, "获取关联的待办事项失败"))
+			return
+		}
+
+		resp := reminder.CreateResponse{
+			ID:         createdReminder.ID,
+			TodoID:     createdReminder.TodoID,
+			RemindAt:   createdReminder.RemindAt,
+			RemindType: createdReminder.RemindType,
+			NotifyType: createdReminder.NotifyType,
+			CreatedAt:  createdReminder.CreatedAt,
+			Todo:       todo,
+			Reminder:   createdReminder,
+		}
+
+		c.JSON(http.StatusOK, response.Success(resp))
 	}
 }
 
