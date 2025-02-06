@@ -100,3 +100,9 @@ profile.out
 # Swagger 文档
 /docs/*
 !docs/.gitkeep
+
+# 添加以下内容
+/data
+/logs
+/build
+/deployment

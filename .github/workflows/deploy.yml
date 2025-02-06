@@ -1,0 +1,57 @@
+name: Deploy to Huawei Cloud
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22'
+        
+    - name: Build
+      run: |
+        go mod download
+        CGO_ENABLED=0 GOOS=linux go build -o build/todo-api cmd/server/main.go
+        
+    - name: Create deployment directory
+      run: |
+        mkdir -p deployment
+        cp build/todo-api deployment/
+        cp -r configs deployment/
+        cp deployments/docker/docker-compose.prod.yml deployment/docker-compose.yml
+        cp deployments/scripts/deploy.sh deployment/
+        chmod +x deployment/deploy.sh
+        
+    - name: Deploy to Huawei Cloud
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: 1.92.74.47
+        username: root
+        password: Ma_123456
+        port: 22
+        source: "deployment/*"
+        target: "/opt/todo-api"
+        strip_components: 1
+        
+    - name: Execute deployment script
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: 1.92.74.47
+        username: root
+        password: Ma_123456
+        port: 22
+        script: |
+          cd /opt/todo-api
+          chmod +x deploy.sh
+          ./deploy.sh 
