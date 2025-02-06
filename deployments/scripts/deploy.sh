@@ -3,6 +3,10 @@
 # 确保脚本在出错时退出
 set -e
 
+# 设置环境变量
+export MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
+export DB_PASSWORD=${DB_PASSWORD:-root}
+
 # 创建必要的目录
 mkdir -p /data/mysql/conf.d
 mkdir -p /data/mysql/logs
