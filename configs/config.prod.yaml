@@ -1,0 +1,21 @@
+app:
+  name: "todo-api"
+  version: "1.0.0"
+  mode: "production"
+  port: 8080
+  
+mysql:
+  host: "mysql"        # 使用 docker-compose 中的服务名
+  port: 3306
+  username: "todo_user"
+  password: "${DB_PASSWORD}"  # 将从环境变量获取
+  database: "todo_db"
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: "1h"
+
+redis:
+  host: "redis"        # 使用 docker-compose 中的服务名
+  port: 6379
+  password: ""
+  db: 0 
