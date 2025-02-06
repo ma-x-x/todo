@@ -34,9 +34,9 @@ jobs:
         
     - name: Create deployment directory
       run: |
-        mkdir -p deployment
+        mkdir -p deployment/configs
         cp build/todo-api deployment/
-        cp -r configs deployment/
+        cp configs/config.prod.yaml deployment/configs/
         cp deployments/docker/docker-compose.prod.yml deployment/docker-compose.yml
         cp deployments/docker/Dockerfile deployment/
         cp deployments/scripts/deploy.sh deployment/

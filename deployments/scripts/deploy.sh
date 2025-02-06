@@ -79,12 +79,27 @@ fi
 # 停止并删除旧容器
 docker-compose down || true
 
-# 构建并启动新容器
-docker-compose up -d --build
+# 等待 MySQL 就绪
+wait_for_mysql() {
+    echo "Waiting for MySQL to be ready..."
+    for i in {1..30}; do
+        if docker exec todo-api_mysql_1 mysqladmin ping -h mysql -u"root" -p"${MYSQL_ROOT_PASSWORD}" --silent; then
+            echo "MySQL is ready!"
+            return 0
+        fi
+        echo "Waiting for MySQL to be ready... ($i/30)"
+        sleep 2
+    done
+    echo "MySQL did not become ready in time"
+    return 1
+}
 
-# 等待服务启动
-echo "Waiting for services to start..."
-sleep 10
+# 构建并启动新容器
+docker-compose up -d mysql redis
+wait_for_mysql
+
+# 启动应用
+docker-compose up -d app
 
 # 检查服务状态
 echo "Checking service status..."
@@ -93,10 +108,6 @@ docker-compose ps
 # 检查应用日志
 echo "Checking application logs..."
 docker-compose logs --tail=50 app
-
-# 等待 MySQL 启动
-echo "Waiting for MySQL to start..."
-sleep 20
 
 # 创建应用数据库用户
 docker exec todo-api_mysql_1 mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "
