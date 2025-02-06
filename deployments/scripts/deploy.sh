@@ -78,4 +78,16 @@ docker-compose ps
 echo "Checking application logs..."
 docker-compose logs --tail=50 app
 
+# 等待 MySQL 启动
+echo "Waiting for MySQL to start..."
+sleep 20
+
+# 创建应用数据库用户
+docker exec todo-api_mysql_1 mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "
+CREATE DATABASE IF NOT EXISTS todo_db;
+CREATE USER IF NOT EXISTS 'todo_user'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+GRANT ALL PRIVILEGES ON todo_db.* TO 'todo_user'@'%';
+FLUSH PRIVILEGES;
+"
+
 echo "Deployment completed successfully!" 

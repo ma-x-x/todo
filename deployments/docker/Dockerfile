@@ -1,7 +1,7 @@
 # 第一阶段：构建阶段
 # 使用golang:1.21-alpine作为基础镜像
 # 选择alpine版本是因为它体积小（约5MB），而完整的golang镜像超过1GB
-FROM golang:1.21-alpine AS builder
+FROM golang:1.22-alpine AS builder
 
 # 设置容器内的工作目录为/app
 # 后续的COPY和RUN命令都将基于此目录执行
