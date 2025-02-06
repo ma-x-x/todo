@@ -25,23 +25,22 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/build/todo-api cmd/server/main.go
 
 # 第二阶段：运行阶段
-# 使用alpine:3.19作为基础镜像
-# 这是一个极小的Linux发行版，仅包含必要的运行时环境
+# 使用alpine作为基础镜像
 FROM alpine:3.19
 
 # 设置工作目录
 WORKDIR /app
 
-# 从构建阶段复制文件到运行阶段
-# 只复制必要的文件：配置文件和编译好的二进制文件
-# 这样可以大大减少最终镜像的体积
-COPY --from=builder /app/configs/config.yaml /app/configs/
-COPY --from=builder /app/build/todo-api /app/
+# 复制编译好的二进制文件和配置文件
+COPY todo-api .
+COPY configs/ ./configs/
+
+# 创建日志目录
+RUN mkdir -p /app/logs
 
 # 声明容器将使用的端口
 # 这只是一个文档说明，实际上不会自动打开端口
 EXPOSE 8080
 
 # 容器启动时执行的命令
-# 使用数组格式可以避免shell解释，直接执行二进制文件
-CMD ["/app/todo-api"] 
+CMD ["./todo-api"] 
