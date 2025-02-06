@@ -18,9 +18,9 @@ import (
 // @Produce json
 // @Param Authorization header string true "Bearer JWT认证令牌"
 // @Param request body category.CreateRequest true "创建分类的请求参数"
-// @Success 200 {object} category.CreateResponse "创建成功返回的分类信息"
-// @Failure 400 {object} errors.Error "请求参数错误"
-// @Failure 401 {object} errors.Error "未授权访问"
+// @Success 200 {object} response.Response{data=category.CreateResponse} "创建成功返回的分类信息"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权访问"
 // @Router /categories [post]
 func CreateCategory(categoryService service.CategoryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -48,14 +48,15 @@ func CreateCategory(categoryService service.CategoryService) gin.HandlerFunc {
 	}
 }
 
+// ListCategories 获取分类列表
 // @Summary 获取分类列表
 // @Description 获取当前用户的所有分类
 // @Tags 分类管理
 // @Accept json
 // @Produce json
 // @Param Authorization header string true "Bearer JWT"
-// @Success 200 {object} category.ListResponse
-// @Failure 401 {object} errors.Error
+// @Success 200 {object} response.Response{data=category.ListResponse} "获取成功"
+// @Failure 401 {object} response.Response "未授权访问"
 // @Router /categories [get]
 func ListCategories(categoryService service.CategoryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -82,9 +83,9 @@ func ListCategories(categoryService service.CategoryService) gin.HandlerFunc {
 // @Param Authorization header string true "Bearer JWT"
 // @Param id path int true "分类ID"
 // @Param request body category.UpdateRequest true "更新分类请求参数"
-// @Success 200 {object} category.UpdateResponse
-// @Failure 400 {object} errors.Error
-// @Failure 401 {object} errors.Error
+// @Success 200 {object} response.Response{data=category.UpdateResponse} "更新成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权访问"
 // @Router /categories/{id} [put]
 func UpdateCategory(categoryService service.CategoryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -125,9 +126,9 @@ func UpdateCategory(categoryService service.CategoryService) gin.HandlerFunc {
 // @Produce json
 // @Param Authorization header string true "Bearer JWT"
 // @Param id path int true "分类ID"
-// @Success 200 {object} category.UpdateResponse
-// @Failure 400 {object} errors.Error
-// @Failure 401 {object} errors.Error
+// @Success 200 {object} response.Response{data=category.UpdateResponse} "删除成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权访问"
 // @Router /categories/{id} [delete]
 func DeleteCategory(categoryService service.CategoryService) gin.HandlerFunc {
 	return func(c *gin.Context) {

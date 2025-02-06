@@ -18,9 +18,9 @@ import (
 // @Produce json
 // @Param Authorization header string true "Bearer JWT认证令牌"
 // @Param request body reminder.CreateRequest true "创建提醒的详细参数"
-// @Success 200 {object} reminder.CreateResponse "创建成功的提醒信息"
-// @Failure 400 {object} errors.Error "参数验证失败或业务错误"
-// @Failure 401 {object} errors.Error "未授权访问"
+// @Success 200 {object} response.Response{data=reminder.CreateResponse} "创建成功的提醒信息"
+// @Failure 400 {object} response.Response "参数验证失败或业务错误"
+// @Failure 401 {object} response.Response "未授权访问"
 // @Router /reminders [post]
 func CreateReminder(reminderService service.ReminderService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -48,6 +48,7 @@ func CreateReminder(reminderService service.ReminderService) gin.HandlerFunc {
 	}
 }
 
+// ListReminders 获取提醒列表
 // @Summary 获取待办事项的提醒列表
 // @Description 获取指定待办事项的所有提醒
 // @Tags 提醒管理
@@ -55,9 +56,9 @@ func CreateReminder(reminderService service.ReminderService) gin.HandlerFunc {
 // @Produce json
 // @Param Authorization header string true "Bearer JWT"
 // @Param todo_id path int true "待办事项ID"
-// @Success 200 {object} reminder.ListResponse
-// @Failure 400 {object} errors.Error
-// @Failure 401 {object} errors.Error
+// @Success 200 {object} response.Response{data=reminder.ListResponse} "获取成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权访问"
 // @Router /reminders/todo/{todo_id} [get]
 func ListReminders(reminderService service.ReminderService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -80,6 +81,7 @@ func ListReminders(reminderService service.ReminderService) gin.HandlerFunc {
 	}
 }
 
+// UpdateReminder 更新提醒
 // @Summary 更新提醒
 // @Description 更新指定的提醒
 // @Tags 提醒管理
@@ -88,9 +90,9 @@ func ListReminders(reminderService service.ReminderService) gin.HandlerFunc {
 // @Param Authorization header string true "Bearer JWT"
 // @Param id path int true "提醒ID"
 // @Param request body reminder.UpdateRequest true "更新提醒请求参数"
-// @Success 200 {object} reminder.UpdateResponse
-// @Failure 400 {object} errors.Error
-// @Failure 401 {object} errors.Error
+// @Success 200 {object} response.Response{data=reminder.UpdateResponse} "更新成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权访问"
 // @Router /reminders/{id} [put]
 func UpdateReminder(reminderService service.ReminderService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -123,6 +125,7 @@ func UpdateReminder(reminderService service.ReminderService) gin.HandlerFunc {
 	}
 }
 
+// DeleteReminder 删除提醒
 // @Summary 删除提醒
 // @Description 删除指定的提醒
 // @Tags 提醒管理
@@ -130,9 +133,9 @@ func UpdateReminder(reminderService service.ReminderService) gin.HandlerFunc {
 // @Produce json
 // @Param Authorization header string true "Bearer JWT"
 // @Param id path int true "提醒ID"
-// @Success 200 {object} reminder.UpdateResponse
-// @Failure 400 {object} errors.Error
-// @Failure 401 {object} errors.Error
+// @Success 200 {object} response.Response{data=reminder.UpdateResponse} "删除成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权访问"
 // @Router /reminders/{id} [delete]
 func DeleteReminder(reminderService service.ReminderService) gin.HandlerFunc {
 	return func(c *gin.Context) {

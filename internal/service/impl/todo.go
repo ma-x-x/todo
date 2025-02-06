@@ -38,19 +38,24 @@ func NewTodoService(todoRepo repository.TodoRepository) *TodoService {
 //   - uint: 返回新创建的待办事项ID
 //   - error: 可能的错误信息
 func (s *TodoService) Create(ctx context.Context, userID uint, req *todo.CreateRequest) (uint, error) {
-	todo := &models.Todo{
-		Title:       req.Title,                     // 待办事项标题
-		Description: req.Description,               // 待办事项描述
-		Priority:    models.Priority(req.Priority), // 设置优先级
-		UserID:      userID,                        // 所属用户ID
-		CategoryID:  req.CategoryID,                // 所属分类ID
+	todoItem := &models.Todo{
+		Title:       req.Title,
+		Description: req.Description,
+		UserID:      userID,
+		CategoryID:  req.CategoryID,
 	}
 
-	if err := s.todoRepo.Create(ctx, todo); err != nil {
+	if req.Priority != "" {
+		todoItem.Priority = models.Priority(req.Priority)
+	} else {
+		todoItem.Priority = models.PriorityMedium // 默认中优先级
+	}
+
+	if err := s.todoRepo.Create(ctx, todoItem); err != nil {
 		return 0, err
 	}
 
-	return todo.ID, nil
+	return todoItem.ID, nil
 }
 
 // List 获取用户的所有待办事项
@@ -79,29 +84,28 @@ func (s *TodoService) Get(ctx context.Context, id, userID uint) (*models.Todo, e
 
 // Update 更新待办事项
 func (s *TodoService) Update(ctx context.Context, id, userID uint, req *todo.UpdateRequest) error {
-	todo, err := s.Get(ctx, id, userID)
+	todoItem, err := s.Get(ctx, id, userID)
 	if err != nil {
 		return err
 	}
 
-	// 更新提供的字段
 	if req.Title != nil {
-		todo.Title = *req.Title
+		todoItem.Title = *req.Title
 	}
 	if req.Description != nil {
-		todo.Description = *req.Description
-	}
-	if req.Priority != nil {
-		todo.Priority = models.Priority(*req.Priority)
+		todoItem.Description = *req.Description
 	}
 	if req.Completed != nil {
-		todo.Completed = *req.Completed
+		todoItem.Completed = *req.Completed
+	}
+	if req.Priority != nil {
+		todoItem.Priority = models.Priority(*req.Priority)
 	}
 	if req.CategoryID != nil {
-		todo.CategoryID = req.CategoryID
+		todoItem.CategoryID = req.CategoryID
 	}
 
-	return s.todoRepo.Update(ctx, todo)
+	return s.todoRepo.Update(ctx, todoItem)
 }
 
 // Delete 删除待办事项

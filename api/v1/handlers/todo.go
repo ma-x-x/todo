@@ -17,10 +17,10 @@ import (
 // @Accept json
 // @Produce json
 // @Param Authorization header string true "Bearer JWT认证令牌"
-// @Param request body todo.CreateRequest true "创建待办事项的详细参数，包含标题(必填)、描述(选填)、优先级(1低/2中/3高)和分类ID(选填)"
-// @Success 200 {object} todo.CreateResponse "创建成功返回待办事项ID"
-// @Failure 400 {object} errors.Error "参数验证失败或业务错误"
-// @Failure 401 {object} errors.Error "未授权访问"
+// @Param request body todo.CreateRequest true "创建待办事项的详细参数"
+// @Success 200 {object} response.Response{data=todo.DetailResponse} "创建成功返回待办事项信息"
+// @Failure 400 {object} response.Response "参数验证失败或业务错误"
+// @Failure 401 {object} response.Response "未授权访问"
 // @Router /todos [post]
 func CreateTodo(todoService service.TodoService, categoryService service.CategoryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -62,14 +62,15 @@ func CreateTodo(todoService service.TodoService, categoryService service.Categor
 	}
 }
 
+// ListTodos 获取待办事项列表
 // @Summary 获取待办事项列表
 // @Description 获取当前用户的所有待办事项
 // @Tags 待办事项管理
 // @Accept json
 // @Produce json
 // @Param Authorization header string true "Bearer JWT"
-// @Success 200 {object} todo.ListResponse
-// @Failure 401 {object} errors.Error
+// @Success 200 {object} response.Response{data=todo.ListResponse} "获取成功"
+// @Failure 401 {object} response.Response "未授权访问"
 // @Router /todos [get]
 func ListTodos(todoService service.TodoService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -87,6 +88,7 @@ func ListTodos(todoService service.TodoService) gin.HandlerFunc {
 	}
 }
 
+// GetTodo 获取待办事项详情
 // @Summary 获取待办事项详情
 // @Description 获取指定的待办事项详情
 // @Tags 待办事项管理
@@ -94,9 +96,9 @@ func ListTodos(todoService service.TodoService) gin.HandlerFunc {
 // @Produce json
 // @Param Authorization header string true "Bearer JWT"
 // @Param id path int true "待办事项ID"
-// @Success 200 {object} todo.DetailResponse
-// @Failure 400 {object} errors.Error
-// @Failure 401 {object} errors.Error
+// @Success 200 {object} response.Response{data=todo.DetailResponse} "获取成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权访问"
 // @Router /todos/{id} [get]
 func GetTodo(todoService service.TodoService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -119,6 +121,7 @@ func GetTodo(todoService service.TodoService) gin.HandlerFunc {
 	}
 }
 
+// UpdateTodo 更新待办事项
 // @Summary 更新待办事项
 // @Description 更新指定的待办事项
 // @Tags 待办事项管理
@@ -127,9 +130,9 @@ func GetTodo(todoService service.TodoService) gin.HandlerFunc {
 // @Param Authorization header string true "Bearer JWT"
 // @Param id path int true "待办事项ID"
 // @Param request body todo.UpdateRequest true "更新待办事项请求参数"
-// @Success 200 {object} todo.UpdateResponse
-// @Failure 400 {object} errors.Error
-// @Failure 401 {object} errors.Error
+// @Success 200 {object} response.Response{data=todo.DetailResponse} "更新成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权访问"
 // @Router /todos/{id} [put]
 func UpdateTodo(todoService service.TodoService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -162,6 +165,7 @@ func UpdateTodo(todoService service.TodoService) gin.HandlerFunc {
 	}
 }
 
+// DeleteTodo 删除待办事项
 // @Summary 删除待办事项
 // @Description 删除指定的待办事项
 // @Tags 待办事项管理
@@ -169,9 +173,9 @@ func UpdateTodo(todoService service.TodoService) gin.HandlerFunc {
 // @Produce json
 // @Param Authorization header string true "Bearer JWT"
 // @Param id path int true "待办事项ID"
-// @Success 200 {object} todo.UpdateResponse
-// @Failure 400 {object} errors.Error
-// @Failure 401 {object} errors.Error
+// @Success 200 {object} response.Response{data=todo.UpdateResponse} "删除成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权访问"
 // @Router /todos/{id} [delete]
 func DeleteTodo(todoService service.TodoService) gin.HandlerFunc {
 	return func(c *gin.Context) {

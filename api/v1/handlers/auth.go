@@ -17,8 +17,9 @@ import (
 // @Accept json
 // @Produce json
 // @Param request body auth.RegisterRequest true "注册信息，包含用户名和密码"
-// @Success 200 {object} auth.RegisterResponse "注册成功返回信息"
-// @Failure 400 {object} errors.Error "请求参数错误或注册过程中的业务错误"
+// @Success 200 {object} response.Response{data=auth.RegisterResponse} "注册成功返回信息"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /auth/register [post]
 func Register(authService service.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -51,8 +52,9 @@ func Register(authService service.AuthService) gin.HandlerFunc {
 // @Accept json
 // @Produce json
 // @Param request body auth.LoginRequest true "登录信息，包含用户名和密码"
-// @Success 200 {object} auth.LoginResponse "登录成功返回的JWT令牌和用户信息"
-// @Failure 401 {object} errors.Error "用户名或密码错误等认证失败的情况"
+// @Success 200 {object} response.Response{data=auth.LoginResponse} "登录成功返回的JWT令牌和用户信息"
+// @Failure 401 {object} response.Response "用户名或密码错误等认证失败的情况"
+// @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /auth/login [post]
 func Login(authService service.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {

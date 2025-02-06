@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS todos (
     title VARCHAR(128) NOT NULL,
     description TEXT,
     completed BOOLEAN DEFAULT FALSE,
-    priority TINYINT DEFAULT 2,
+    priority VARCHAR(10) DEFAULT 'medium',
     user_id BIGINT UNSIGNED NOT NULL,
     category_id BIGINT UNSIGNED,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

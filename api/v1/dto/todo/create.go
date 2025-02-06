@@ -14,10 +14,9 @@ type CreateRequest struct {
 
 	// Priority 优先级
 	// Required: false
-	// Enum: [1,2,3]
-	// Example: 2
-	// Note: 1=低优先级 2=中优先级 3=高优先级
-	Priority    int    `json:"priority" binding:"omitempty,oneof=1 2 3"`
+	// Enum: [low medium high]
+	// Example: medium
+	Priority    string `json:"priority" binding:"omitempty,oneof=low medium high"`
 
 	// CategoryID 所属分类ID
 	// Required: false

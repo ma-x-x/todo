@@ -5,7 +5,7 @@ type UpdateRequest struct {
 	Title       *string `json:"title,omitempty" binding:"omitempty,max=128"`       // 标题
 	Description *string `json:"description,omitempty" binding:"omitempty,max=1024"` // 描述
 	Completed   *bool   `json:"completed,omitempty"`                               // 完成状态
-	Priority    *int    `json:"priority,omitempty" binding:"omitempty,oneof=1 2 3"` // 优先级
+	Priority    *string `json:"priority,omitempty" binding:"omitempty,oneof=low medium high"` // 优先级
 	CategoryID  *uint   `json:"categoryId,omitempty"`                              // 分类ID
 }
 
