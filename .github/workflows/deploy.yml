@@ -19,6 +19,12 @@ jobs:
       with:
         go-version: '1.22'
         
+    - name: Install swag
+      run: go install github.com/swaggo/swag/cmd/swag@latest
+        
+    - name: Generate Swagger Docs
+      run: swag init -g cmd/server/main.go --parseDependency --parseInternal --parseDepth 1
+        
     - name: Build
       run: |
         go mod download
