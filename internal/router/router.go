@@ -1,11 +1,11 @@
 package routes
 
 import (
-	"todo-demo/internal/middleware"
-	"todo-demo/internal/service"
-	"todo-demo/pkg/config"
+	"todo/internal/middleware"
+	"todo/internal/service"
+	"todo/pkg/config"
 
-	"todo-demo/api/v1/handlers"
+	"todo/api/v1/handlers"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"

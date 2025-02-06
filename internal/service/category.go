@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"todo-demo/api/v1/dto/category"
-	"todo-demo/internal/models"
+	"todo/api/v1/dto/category"
+	"todo/internal/models"
 )
 
 // CategoryService 分类服务接口

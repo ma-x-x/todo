@@ -2,9 +2,9 @@ package middleware
 
 import (
 	"strings"
-	"todo-demo/pkg/config"
-	"todo-demo/pkg/errors"
-	"todo-demo/pkg/utils"
+	"todo/pkg/config"
+	"todo/pkg/errors"
+	"todo/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )

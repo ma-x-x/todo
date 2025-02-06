@@ -3,8 +3,8 @@ package db
 import (
 	"fmt"
 	"time"
-	"todo-demo/pkg/errors"
-	"todo-demo/pkg/logger"
+	"todo/pkg/errors"
+	"todo/pkg/logger"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"

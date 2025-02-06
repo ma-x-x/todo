@@ -1,6 +1,6 @@
 package reminder
 
-import "todo-demo/internal/models"
+import "todo/internal/models"
 
 // ListResponse 提醒列表响应
 type ListResponse struct {

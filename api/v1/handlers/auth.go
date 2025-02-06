@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"net/http"
-	"todo-demo/api/v1/dto/auth"
-	"todo-demo/internal/service"
-	"todo-demo/pkg/errors"
-	"todo-demo/pkg/response"
+	"todo/api/v1/dto/auth"
+	"todo/internal/service"
+	"todo/pkg/errors"
+	"todo/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )

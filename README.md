@@ -112,7 +112,7 @@ curl -X POST http://localhost:8080/api/v1/todos \
 项目采用标准的 Go 项目布局，主要目录说明如下：
 
 ```
-todo-demo
+todo
 ├── api                 # API 接口定义和处理
 │   └── v1
 │       ├── dto        # 数据传输对象(Data Transfer Objects)

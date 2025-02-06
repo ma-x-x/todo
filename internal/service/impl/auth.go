@@ -2,12 +2,12 @@ package impl
 
 import (
 	"context"
-	"todo-demo/api/v1/dto/auth"
-	"todo-demo/internal/models"
-	"todo-demo/internal/repository"
-	"todo-demo/pkg/config"
-	"todo-demo/pkg/errors"
-	"todo-demo/pkg/utils"
+	"todo/api/v1/dto/auth"
+	"todo/internal/models"
+	"todo/internal/repository"
+	"todo/pkg/config"
+	"todo/pkg/errors"
+	"todo/pkg/utils"
 )
 
 // authService 实现认证服务接口

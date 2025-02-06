@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"todo-demo/api/v1/dto/auth"
+	"todo/api/v1/dto/auth"
 )
 
 // AuthService 定义认证相关的业务接口

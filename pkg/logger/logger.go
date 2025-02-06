@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"todo-demo/pkg/config"
+	"todo/pkg/config"
 	"time"
 
 	"github.com/rs/zerolog"

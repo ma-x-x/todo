@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"todo-demo/api/v1/dto/todo"
-	"todo-demo/internal/models"
+	"todo/api/v1/dto/todo"
+	"todo/internal/models"
 )
 
 // TodoService 定义待办事项相关的业务接口

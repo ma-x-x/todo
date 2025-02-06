@@ -742,8 +742,8 @@ type TodoService struct {
 #### 1.1 创建项目目录
 ```bash
 # 创建项目根目录
-mkdir todo-demo
-cd todo-demo
+mkdir todo
+cd todo
 
 # 创建项目结构
 mkdir -p cmd/server
@@ -757,7 +757,7 @@ mkdir -p test/testutils
 
 #### 1.2 初始化 Go 模块
 ```bash
-go mod init todo-demo
+go mod init todo
 ```
 
 #### 1.3 创建 .gitignore
@@ -881,8 +881,8 @@ package database
 
 import (
     "fmt"
-    "todo-demo/internal/models"
-    "todo-demo/pkg/config"
+    "todo/internal/models"
+    "todo/pkg/config"
 
     "gorm.io/driver/mysql"
     "gorm.io/gorm"
@@ -924,7 +924,7 @@ Repository 层负责数据访问，实现与数据库的交互。
 package repository
 
 import (
-    "todo-demo/internal/models"
+    "todo/internal/models"
     "gorm.io/gorm"
 )
 
@@ -1509,11 +1509,11 @@ func (s *TodoService) GetByID(id uint) (*Todo, error) {
 1. 项目初始化
    ```bash
    # 1. 创建项目目录
-   mkdir -p todo-demo/{cmd,api,internal,pkg}
-   cd todo-demo
+   mkdir -p todo/{cmd,api,internal,pkg}
+   cd todo
 
    # 2. 初始化 Go 模块
-   go mod init todo-demo
+   go mod init todo
 
    # 3. 安装基础依赖
    go get -u github.com/gin-gonic/gin

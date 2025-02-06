@@ -3,10 +3,10 @@ package impl
 import (
 	"context"
 	"testing"
-	"todo-demo/api/v1/dto/auth"
-	"todo-demo/internal/models"
-	"todo-demo/pkg/config"
-	"todo-demo/pkg/errors"
+	"todo/api/v1/dto/auth"
+	"todo/internal/models"
+	"todo/pkg/config"
+	"todo/pkg/errors"
 )
 
 // mockUserRepo 模拟用户仓储接口，用于单元测试

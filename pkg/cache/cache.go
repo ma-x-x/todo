@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"todo-demo/pkg/config"
+	"todo/pkg/config"
 
 	"github.com/redis/go-redis/v9"
 )

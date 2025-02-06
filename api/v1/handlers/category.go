@@ -3,9 +3,9 @@ package handlers
 import (
 	"net/http"
 	"strconv"
-	"todo-demo/api/v1/dto/category"
-	"todo-demo/internal/service"
-	"todo-demo/pkg/response"
+	"todo/api/v1/dto/category"
+	"todo/internal/service"
+	"todo/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )

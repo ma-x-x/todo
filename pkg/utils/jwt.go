@@ -2,7 +2,7 @@ package utils
 
 import (
 	"time"
-	"todo-demo/pkg/config"
+	"todo/pkg/config"
 
 	"github.com/golang-jwt/jwt"
 )

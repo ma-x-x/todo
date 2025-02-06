@@ -2,7 +2,7 @@ package database
 
 import (
 	"fmt"
-	"todo-demo/pkg/config"
+	"todo/pkg/config"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"

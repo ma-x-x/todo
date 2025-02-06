@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"time"
-	"todo-demo/pkg/logger"
+	"todo/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 )

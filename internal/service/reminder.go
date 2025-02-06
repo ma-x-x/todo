@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"todo-demo/api/v1/dto/reminder"
-	"todo-demo/internal/models"
+	"todo/api/v1/dto/reminder"
+	"todo/internal/models"
 )
 
 // ReminderService 提醒服务接口

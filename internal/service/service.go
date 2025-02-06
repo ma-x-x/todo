@@ -2,13 +2,13 @@ package service
 
 import (
 	"context"
-	"todo-demo/api/v1/dto/category"
-	"todo-demo/api/v1/dto/reminder"
-	"todo-demo/api/v1/dto/todo"
-	"todo-demo/internal/models"
-	"todo-demo/internal/repository"
-	"todo-demo/internal/service/impl"
-	"todo-demo/pkg/config"
+	"todo/api/v1/dto/category"
+	"todo/api/v1/dto/reminder"
+	"todo/api/v1/dto/todo"
+	"todo/internal/models"
+	"todo/internal/repository"
+	"todo/internal/service/impl"
+	"todo/pkg/config"
 
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"

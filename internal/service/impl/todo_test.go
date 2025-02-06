@@ -3,9 +3,9 @@ package impl
 import (
 	"context"
 	"testing"
-	"todo-demo/api/v1/dto/todo"
-	"todo-demo/internal/models"
-	"todo-demo/pkg/errors"
+	"todo/api/v1/dto/todo"
+	"todo/internal/models"
+	"todo/pkg/errors"
 )
 
 // mockTodoRepo 模拟待办事项仓储接口

@@ -2,7 +2,7 @@ package reminder
 
 import (
 	"time"
-	"todo-demo/internal/models"
+	"todo/internal/models"
 )
 
 // CreateRequest 创建提醒请求

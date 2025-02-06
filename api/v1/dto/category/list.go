@@ -1,6 +1,6 @@
 package category
 
-import "todo-demo/internal/models"
+import "todo/internal/models"
 
 // ListResponse 分类列表响应
 type ListResponse struct {

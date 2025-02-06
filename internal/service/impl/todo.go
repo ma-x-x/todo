@@ -2,10 +2,10 @@ package impl
 
 import (
 	"context"
-	"todo-demo/api/v1/dto/todo"
-	"todo-demo/internal/models"
-	"todo-demo/internal/repository"
-	"todo-demo/pkg/errors"
+	"todo/api/v1/dto/todo"
+	"todo/internal/models"
+	"todo/internal/repository"
+	"todo/pkg/errors"
 )
 
 // TodoService 待办事项服务结构体

@@ -1,6 +1,6 @@
 package todo
 
-import "todo-demo/internal/models"
+import "todo/internal/models"
 
 // ListResponse 待办事项列表响应
 type ListResponse struct {

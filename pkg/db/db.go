@@ -2,9 +2,9 @@ package db
 
 import (
 	"fmt"
-	"todo-demo/pkg/config"
-	"todo-demo/pkg/errors"
-	"todo-demo/pkg/logger"
+	"todo/pkg/config"
+	"todo/pkg/errors"
+	"todo/pkg/logger"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"

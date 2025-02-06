@@ -2,10 +2,10 @@ package impl
 
 import (
 	"context"
-	"todo-demo/api/v1/dto/category"
-	"todo-demo/internal/models"
-	"todo-demo/internal/repository"
-	"todo-demo/pkg/errors"
+	"todo/api/v1/dto/category"
+	"todo/internal/models"
+	"todo/internal/repository"
+	"todo/pkg/errors"
 )
 
 // CategoryService 分类服务实现

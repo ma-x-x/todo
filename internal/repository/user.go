@@ -3,8 +3,8 @@ package repository
 
 import (
 	"context"
-	"todo-demo/internal/models"
-	"todo-demo/pkg/errors"
+	"todo/internal/models"
+	"todo/pkg/errors"
 
 	"gorm.io/gorm"
 )
