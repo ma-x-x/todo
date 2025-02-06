@@ -19,6 +19,9 @@ jobs:
       with:
         go-version: '1.22'
         
+    - name: Download dependencies
+      run: go mod download
+        
     - name: Install swag
       run: go install github.com/swaggo/swag/cmd/swag@latest
         
@@ -27,7 +30,6 @@ jobs:
         
     - name: Build
       run: |
-        go mod download
         CGO_ENABLED=0 GOOS=linux go build -o build/todo-api cmd/server/main.go
         
     - name: Create deployment directory
