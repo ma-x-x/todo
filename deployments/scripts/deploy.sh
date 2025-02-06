@@ -83,7 +83,15 @@ docker-compose down || true
 wait_for_mysql() {
     echo "Waiting for MySQL to be ready..."
     for i in {1..30}; do
-        if docker exec todo-api_mysql_1 mysqladmin ping -h mysql -u"root" -p"${MYSQL_ROOT_PASSWORD}" --silent; then
+        # 获取 MySQL 容器 ID
+        MYSQL_CONTAINER=$(docker-compose ps -q mysql)
+        if [ -z "$MYSQL_CONTAINER" ]; then
+            echo "MySQL container not found"
+            sleep 2
+            continue
+        fi
+        
+        if docker exec $MYSQL_CONTAINER mysqladmin ping -h localhost -u"root" -p"${MYSQL_ROOT_PASSWORD}" --silent; then
             echo "MySQL is ready!"
             return 0
         fi
@@ -110,7 +118,8 @@ echo "Checking application logs..."
 docker-compose logs --tail=50 app
 
 # 创建应用数据库用户
-docker exec todo-api_mysql_1 mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "
+MYSQL_CONTAINER=$(docker-compose ps -q mysql)
+docker exec $MYSQL_CONTAINER mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "
 CREATE DATABASE IF NOT EXISTS todo_db;
 CREATE USER IF NOT EXISTS 'todo_user'@'%' IDENTIFIED BY '${DB_PASSWORD}';
 GRANT ALL PRIVILEGES ON todo_db.* TO 'todo_user'@'%';
