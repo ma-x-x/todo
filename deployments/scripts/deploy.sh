@@ -7,6 +7,22 @@ set -e
 export MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
 export DB_PASSWORD=${DB_PASSWORD:-root}
 
+# 检查并清理端口占用
+check_and_free_port() {
+    local port=$1
+    if lsof -i :$port > /dev/null; then
+        echo "Port $port is in use. Attempting to free it..."
+        # 尝试停止使用该端口的进程
+        fuser -k $port/tcp || true
+        sleep 2
+    fi
+}
+
+# 检查关键端口
+check_and_free_port 8081  # 应用端口
+check_and_free_port 3306  # MySQL 端口
+check_and_free_port 6379  # Redis 端口
+
 # 创建必要的目录
 mkdir -p /data/mysql/conf.d
 mkdir -p /data/mysql/logs
