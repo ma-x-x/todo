@@ -58,9 +58,17 @@ setup_system_params
 # 设置环境变量
 export MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
 export DB_PASSWORD=${DB_PASSWORD}
-export REDIS_PASSWORD=${REDIS_PASSWORD}
 export DB_HOST=mysql
+export DB_PORT=3306
+export DB_USER=todo_user
+export DB_NAME=todo_db
 export REDIS_HOST=redis
+export REDIS_PORT=6379
+export REDIS_PASSWORD=${REDIS_PASSWORD}
+export JWT_SECRET=${JWT_SECRET}
+export APP_ENV=prod
+export LOG_LEVEL=info
+export CONFIG_FILE=/app/configs/config.prod.yaml
 
 # 检查服务是否已经存在并运行
 check_service_exists() {

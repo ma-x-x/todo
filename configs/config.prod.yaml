@@ -1,8 +1,8 @@
 server:
   mode: "production"
-  port: ${SERVER_PORT:-8081}
-  read_timeout: ${READ_TIMEOUT:-10}
-  write_timeout: ${WRITE_TIMEOUT:-10}
+  port: 8081
+  read_timeout: 10
+  write_timeout: 10
   
 mysql:
   host: ${DB_HOST:-mysql}
@@ -10,30 +10,30 @@ mysql:
   username: ${DB_USER:-todo_user}
   password: ${DB_PASSWORD}
   database: ${DB_NAME:-todo_db}
-  max_idle_conns: ${DB_MAX_IDLE_CONNS:-10}
-  max_open_conns: ${DB_MAX_OPEN_CONNS:-100}
-  conn_max_lifetime: ${DB_CONN_MAX_LIFETIME:-"1h"}
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: "1h"
 
 redis:
   host: ${REDIS_HOST:-redis}
   port: ${REDIS_PORT:-6379}
-  password: ${REDIS_PASSWORD}
-  db: ${REDIS_DB:-0}
-  pool_size: ${REDIS_POOL_SIZE:-10}
+  password: ${REDIS_PASSWORD:-""}
+  db: 0
+  pool_size: 10
 
 jwt:
   secret: ${JWT_SECRET}
-  expire_hours: ${JWT_EXPIRE_HOURS:-24}
-  issuer: ${JWT_ISSUER:-"todo-api"}
+  expire_hours: 24
+  issuer: "todo-api"
 
 logger:
   level: ${LOG_LEVEL:-info}
-  file: ${LOG_FILE:-/app/logs/app.log}
+  file: "/app/logs/app.log"
 
 rate_limit:
-  requests_per_second: ${RATE_LIMIT_RPS:-100}
-  burst: ${RATE_LIMIT_BURST:-50}
+  requests_per_second: 100
+  burst: 50
 
 task_queue:
-  buffer_size: ${TASK_QUEUE_SIZE:-1000}
-  workers: ${TASK_WORKERS:-5} 
+  buffer_size: 1000
+  workers: 5 

@@ -10,15 +10,18 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_USER=todo_user
+      - DB_HOST=${DB_HOST:-mysql}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_USER=${DB_USER:-todo_user}
       - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=todo_db
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - DB_NAME=${DB_NAME:-todo_db}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-""}
       - JWT_SECRET=${JWT_SECRET}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - CONFIG_FILE=/app/configs/config.prod.yaml
+      - APP_ENV=prod
     depends_on:
       mysql:
         condition: service_healthy
