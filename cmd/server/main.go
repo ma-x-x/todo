@@ -87,6 +87,21 @@ func run() error {
 		return fmt.Errorf("数据库迁移失败: %v", err)
 	}
 
+	// 验证索引是否存在
+	for _, model := range []string{"users", "todos", "categories", "reminders"} {
+		var count int64
+		if err := db.Raw(`
+			SELECT count(*) 
+			FROM information_schema.statistics 
+			WHERE table_schema = ? 
+			AND table_name = ?`, 
+			cfg.MySQL.Database, model).Count(&count).Error; err != nil {
+			log.Printf("警告: 检查表 %s 的索引时出错: %v", model, err)
+		} else if count == 0 {
+			log.Printf("警告: 表 %s 可能缺少必要的索引", model)
+		}
+	}
+
 	// 4. 初始化Redis缓存
 	// 连接Redis，用于缓存和速率限制等功能
 	rdb, err := cache.InitRedis(&cfg.Redis)
@@ -100,6 +115,10 @@ func run() error {
 
 	// 6. 设置Gin框架的运行模式
 	// 可以是debug或release模式
+	if cfg.Server.Mode != "debug" && cfg.Server.Mode != "release" && cfg.Server.Mode != "test" {
+		log.Printf("警告: 未知的服务器模式 '%s'，使用默认的 'release' 模式", cfg.Server.Mode)
+		cfg.Server.Mode = "release"
+	}
 	gin.SetMode(cfg.Server.Mode)
 
 	// 7. 初始化Web服务器

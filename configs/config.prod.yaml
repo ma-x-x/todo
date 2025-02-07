@@ -1,5 +1,5 @@
 server:
-  mode: "production"
+  mode: "release"
   port: 8081
   read_timeout: 10
   write_timeout: 10

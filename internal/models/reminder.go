@@ -3,6 +3,8 @@ package models
 import (
 	"errors"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // 提醒类型常量
@@ -21,9 +23,9 @@ const (
 // Reminder 提醒模型
 // 存储待办事项的提醒信息，包括提醒时间、提醒类型和通知方式等
 type Reminder struct {
-	Base
-	TodoID     uint      `json:"todoId" gorm:"column:todo_id;not null;type:bigint unsigned;index"` // 关联的待办事项ID
-	RemindAt   time.Time `json:"remindAt" gorm:"column:remind_at;not null;type:datetime"`         // 提醒时间
+	gorm.Model
+	TodoID     uint      `json:"todoId" gorm:"column:todo_id;not null;type:bigint unsigned;index:idx_reminders_todo_id"` // 关联的待办事项ID
+	RemindAt   time.Time `json:"remindAt" gorm:"column:remind_at;not null;type:datetime;index:idx_reminders_time"`         // 提醒时间
 	RemindType string    `json:"remindType" gorm:"column:remind_type;not null;type:varchar(10)"`  // 提醒类型
 	NotifyType string    `json:"notifyType" gorm:"column:notify_type;not null;type:varchar(10)"`  // 通知类型
 	Status     bool      `json:"status" gorm:"column:status;not null;default:false"`              // 提醒状态

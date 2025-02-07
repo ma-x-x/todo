@@ -154,9 +154,20 @@ else
     FLUSH PRIVILEGES;
     "
 
+    # 等待数据库完全就绪
+    sleep 5
+
     # 导入初始化 SQL
     echo "正在导入数据库架构..."
     docker-compose exec -T mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" todo_db < scripts/init.sql
+
+    # 验证数据库结构
+    echo "验证数据库结构..."
+    docker-compose exec -T mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" todo_db -e "
+    SELECT TABLE_NAME, ENGINE, TABLE_ROWS, AUTO_INCREMENT
+    FROM information_schema.TABLES 
+    WHERE TABLE_SCHEMA = 'todo_db';
+    "
 fi
 
 # 检查并启动 Redis
