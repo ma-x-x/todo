@@ -27,7 +27,7 @@ jwt:
   issuer: "todo-api"
 
 logger:
-  level: ${LOG_LEVEL:-debug}
+  level: ${LOG_LEVEL:-info}
   file: "/app/logs/app.log"
 
 rate_limit:

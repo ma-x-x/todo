@@ -53,8 +53,7 @@ func run() error {
 	// 1. 加载配置文件
 	// 从配置文件中读取应用所需的各项配置
 	cfg, err := config.LoadConfig()
-	// 输出配置
-	fmt.Errorf("配置文件: %+v\n", cfg)
+	log.Printf("加载的服务器模式: %s", cfg.Server.Mode)
 	if err != nil {
 		return fmt.Errorf("加载配置文件失败: %w", err)
 	}
@@ -114,11 +113,12 @@ func run() error {
 	services := initServices(db, rdb, &cfg.JWT)
 
 	// 6. 设置Gin框架的运行模式
-	// 可以是debug或release模式
+	log.Printf("设置 Gin 模式之前: %s", cfg.Server.Mode)
 	if cfg.Server.Mode != "debug" && cfg.Server.Mode != "release" && cfg.Server.Mode != "test" {
 		log.Printf("警告: 未知的服务器模式 '%s'，使用默认的 'release' 模式", cfg.Server.Mode)
 		cfg.Server.Mode = "release"
 	}
+	log.Printf("最终使用的 Gin 模式: %s", cfg.Server.Mode)
 	gin.SetMode(cfg.Server.Mode)
 
 	// 7. 初始化Web服务器

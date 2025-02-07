@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -115,6 +116,12 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
+	// 验证服务器模式
+	if config.Server.Mode != "debug" && config.Server.Mode != "release" && config.Server.Mode != "test" {
+		log.Printf("警告：配置文件中的服务器模式 '%s' 无效，使用默认的 'release' 模式", config.Server.Mode)
+		config.Server.Mode = "release"
+	}
+
 	// 打印最终配置
 	fmt.Printf("\n最终 MySQL 配置: %+v\n", config.MySQL)
 	fmt.Printf("最终 Redis 配置: %+v\n", config.Redis)
@@ -126,7 +133,7 @@ func LoadConfig() (*Config, error) {
 // setDefaults 设置默认配置值
 // 这些默认值的优先级最低，会被配置文件和环境变量覆盖
 func setDefaults() {
-	viper.SetDefault("server.mode", "debug")
+	viper.SetDefault("server.mode", "release")
 	viper.SetDefault("server.port", 8080)
 	viper.SetDefault("server.read_timeout", 10)
 	viper.SetDefault("server.write_timeout", 10)
@@ -138,7 +145,7 @@ func setDefaults() {
 	viper.SetDefault("redis.db", 0)
 	viper.SetDefault("redis.pool_size", 10)
 
-	viper.SetDefault("logger.level", "debug")
+	viper.SetDefault("logger.level", "info")
 	viper.SetDefault("logger.file", "logs/app.log")
 
 	viper.SetDefault("jwt.expire_hours", 1)

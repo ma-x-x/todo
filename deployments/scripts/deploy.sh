@@ -67,7 +67,7 @@ export REDIS_PORT=6379
 export REDIS_PASSWORD=${REDIS_PASSWORD}
 export JWT_SECRET=${JWT_SECRET}
 export APP_ENV=prod
-export LOG_LEVEL=debug
+export LOG_LEVEL=info
 export CONFIG_FILE=/app/configs/config.prod.yaml
 export TZ=Asia/Shanghai  # 设置时区为中国时区
 
@@ -181,6 +181,16 @@ fi
 
 # 停止并重新启动应用
 echo "正在重新部署应用..."
+# 验证配置文件
+echo "验证配置文件..."
+if [ -f "configs/config.prod.yaml" ]; then
+    echo "配置文件内容:"
+    cat configs/config.prod.yaml
+else
+    echo "错误: 找不到配置文件 configs/config.prod.yaml"
+    exit 1
+fi
+
 docker-compose build --no-cache app
 docker-compose up -d --force-recreate app
 

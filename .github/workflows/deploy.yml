@@ -58,6 +58,9 @@ jobs:
         mkdir -p deployment/scripts
         cp build/todo-api deployment/
         cp configs/config.prod.yaml deployment/configs/
+        # 验证配置文件
+        echo "验证配置文件内容:"
+        cat deployment/configs/config.prod.yaml
         cp deployments/docker/docker-compose.prod.yml deployment/docker-compose.yml
         cp deployments/docker/Dockerfile deployment/
         cp deployments/scripts/deploy.sh deployment/
@@ -125,7 +128,7 @@ jobs:
         JWT_SECRET: ${{ secrets.JWT_SECRET }}
         REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
         APP_ENV: prod
-        LOG_LEVEL: debug
+        LOG_LEVEL: info
         TZ: Asia/Shanghai
         BUILD_VERSION: ${{ github.sha }}
       with:
@@ -143,7 +146,7 @@ jobs:
           export JWT_SECRET="${JWT_SECRET}"
           export REDIS_PASSWORD="${REDIS_PASSWORD:-''}"
           export APP_ENV="prod"
-          export LOG_LEVEL="debug"
+          export LOG_LEVEL="info"
           export BUILD_VERSION="${BUILD_VERSION}"
           chmod +x deploy.sh
           ./deploy.sh 
