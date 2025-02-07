@@ -6,6 +6,8 @@ set -e
 # 设置环境变量
 export MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
 export DB_PASSWORD=${DB_PASSWORD:-root}
+export DB_HOST=mysql
+export REDIS_HOST=redis
 
 # 检查并清理端口占用
 check_and_free_port() {
@@ -76,42 +78,56 @@ aof-use-rdb-preamble yes
 EOF
 fi
 
-# 停止并删除旧容器
-docker-compose down || true
-
-# 等待 MySQL 就绪
+# 等待 MySQL 就绪的函数改进
 wait_for_mysql() {
     echo "Waiting for MySQL to be ready..."
-    for i in {1..30}; do
-        # 获取 MySQL 容器 ID
-        MYSQL_CONTAINER=$(docker-compose ps -q mysql)
-        if [ -z "$MYSQL_CONTAINER" ]; then
-            echo "MySQL container not found"
-            sleep 2
-            continue
-        fi
-        
-        if docker exec $MYSQL_CONTAINER mysqladmin ping -h localhost -u"root" -p"${MYSQL_ROOT_PASSWORD}" --silent; then
+    for i in {1..60}; do
+        if docker-compose exec mysql mysqladmin ping -h mysql -u"root" -p"${MYSQL_ROOT_PASSWORD}" --silent > /dev/null 2>&1; then
             echo "MySQL is ready!"
             return 0
         fi
-        echo "Waiting for MySQL to be ready... ($i/30)"
+        echo "Waiting for MySQL to be ready... ($i/60)"
         sleep 2
     done
     echo "MySQL did not become ready in time"
     return 1
 }
 
-# 构建并启动新容器
+# 等待 Redis 就绪的函数
+wait_for_redis() {
+    echo "Waiting for Redis to be ready..."
+    for i in {1..30}; do
+        if docker-compose exec redis redis-cli -h redis ping > /dev/null 2>&1; then
+            echo "Redis is ready!"
+            return 0
+        fi
+        echo "Waiting for Redis to be ready... ($i/30)"
+        sleep 2
+    done
+    echo "Redis did not become ready in time"
+    return 1
+}
+
+# 停止并删除旧容器
+docker-compose down --volumes --remove-orphans || true
+
+# 清理旧的数据卷（可选，谨慎使用）
+# docker volume prune -f
+
+# 创建 docker 网络（如果不存在）
+docker network create todo-network || true
+
+# 启动数据库和 Redis
+echo "Starting MySQL and Redis..."
 docker-compose up -d mysql redis
-wait_for_mysql
+
+# 等待服务就绪
+wait_for_mysql || exit 1
+wait_for_redis || exit 1
 
 # 初始化数据库
 echo "Initializing database..."
-MYSQL_CONTAINER=$(docker-compose ps -q mysql)
-
-# 创建数据库用户
-docker exec $MYSQL_CONTAINER mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "
+docker-compose exec -T mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "
 CREATE DATABASE IF NOT EXISTS todo_db;
 CREATE USER IF NOT EXISTS 'todo_user'@'%' IDENTIFIED BY '${DB_PASSWORD}';
 GRANT ALL PRIVILEGES ON todo_db.* TO 'todo_user'@'%';
@@ -120,11 +136,22 @@ FLUSH PRIVILEGES;
 
 # 导入初始化 SQL
 echo "Importing database schema..."
-docker cp scripts/init.sql $MYSQL_CONTAINER:/tmp/init.sql
-docker exec $MYSQL_CONTAINER mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" todo_db -e "source /tmp/init.sql"
+docker-compose exec -T mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" todo_db < scripts/init.sql
 
 # 启动应用
+echo "Starting application..."
 docker-compose up -d app
+
+# 等待应用就绪
+echo "Waiting for application to be ready..."
+for i in {1..30}; do
+    if curl -s http://localhost:8081/health > /dev/null; then
+        echo "Application is ready!"
+        break
+    fi
+    echo "Waiting for application to be ready... ($i/30)"
+    sleep 2
+done
 
 # 检查服务状态
 echo "Checking service status..."
