@@ -53,6 +53,8 @@ func run() error {
 	// 1. 加载配置文件
 	// 从配置文件中读取应用所需的各项配置
 	cfg, err := config.LoadConfig()
+	// 输出配置
+	fmt.Printf("配置文件: %+v\n", cfg)
 	if err != nil {
 		return fmt.Errorf("加载配置文件失败: %w", err)
 	}
@@ -67,22 +69,22 @@ func run() error {
 	// 连接MySQL数据库，用于存储应用数据
 	db, err := database.NewMySQLDB(cfg)
 	if err != nil {
-		return fmt.Errorf("Failed to connect to database: %v", err)
+		return fmt.Errorf("连接数据库失败: %v", err)
 	}
 
 	// 验证数据库连接
 	sqlDB, err := db.DB()
 	if err != nil {
-		return fmt.Errorf("Failed to get database instance: %v", err)
+		return fmt.Errorf("获取数据库实例失败: %v", err)
 	}
 
 	if err := sqlDB.Ping(); err != nil {
-		return fmt.Errorf("Failed to ping database: %v", err)
+		return fmt.Errorf("数据库连接测试失败: %v", err)
 	}
 
 	// 在初始化数据库连接后添加
 	if err := db.AutoMigrate(&models.User{}, &models.Todo{}, &models.Category{}, &models.Reminder{}); err != nil {
-		return fmt.Errorf("failed to migrate database: %v", err)
+		return fmt.Errorf("数据库迁移失败: %v", err)
 	}
 
 	// 4. 初始化Redis缓存

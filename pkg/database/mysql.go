@@ -19,19 +19,19 @@ func NewMySQLDB(cfg *config.Config) (*gorm.DB, error) {
 		cfg.MySQL.Database,
 	)
 
-	fmt.Printf("Connecting to MySQL: %s:%d/%s\n", cfg.MySQL.Host, cfg.MySQL.Port, cfg.MySQL.Database)
+	fmt.Printf("正在连接 MySQL 数据库: %s:%d/%s\n", cfg.MySQL.Host, cfg.MySQL.Port, cfg.MySQL.Database)
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
+		return nil, fmt.Errorf("连接数据库失败: %w", err)
 	}
 
 	// 设置连接池
 	sqlDB, err := db.DB()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get database instance: %w", err)
+		return nil, fmt.Errorf("获取数据库实例失败: %w", err)
 	}
 
 	sqlDB.SetMaxIdleConns(cfg.MySQL.MaxIdleConns)

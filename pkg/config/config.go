@@ -82,30 +82,43 @@ type Config struct {
 // 5. 解析配置到结构体
 // 6. 验证必要的配置
 func LoadConfig() (*Config, error) {
+	fmt.Println("\n========== 开始加载配置 ==========")
+	
 	// 1. 设置默认值
+	fmt.Println("1. 设置默认值")
 	setDefaults()
 
 	// 2. 绑定环境变量
+	fmt.Println("2. 绑定环境变量")
 	bindEnvVariables()
 
 	// 3. 读取配置文件
+	fmt.Println("3. 读取配置文件")
 	if err := loadConfigFile(); err != nil {
 		return nil, err
 	}
 
 	// 4. 处理环境变量替换
+	fmt.Println("4. 处理环境变量替换")
 	processEnvVars()
 
 	// 5. 解析配置到结构体
+	fmt.Println("5. 解析配置到结构体")
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+		return nil, fmt.Errorf("解析配置文件失败: %w", err)
 	}
 
 	// 6. 验证必要的配置
+	fmt.Println("6. 验证必要的配置")
 	if err := validateConfig(&config); err != nil {
 		return nil, err
 	}
+
+	// 打印最终配置
+	fmt.Printf("\n最终 MySQL 配置: %+v\n", config.MySQL)
+	fmt.Printf("最终 Redis 配置: %+v\n", config.Redis)
+	fmt.Println("========== 配置加载完成 ==========\n")
 
 	return &config, nil
 }
@@ -140,15 +153,20 @@ func loadConfigFile() error {
 	// 获取配置文件路径
 	configFile := os.Getenv("CONFIG_FILE")
 	if configFile != "" {
+		fmt.Printf("使用 CONFIG_FILE 环境变量指定的配置文件: %s\n", configFile)
 		viper.SetConfigFile(configFile)
 	} else {
 		// 根据环境选择配置文件
 		env := os.Getenv("APP_ENV")
 		if env == "" {
 			env = "dev" // 默认开发环境
+			fmt.Println("未设置 APP_ENV，使用默认环境: dev")
+		} else {
+			fmt.Printf("使用 APP_ENV 环境: %s\n", env)
 		}
 
 		configName := fmt.Sprintf("config.%s.yaml", env)
+		fmt.Printf("尝试加载配置文件: %s\n", configName)
 		viper.SetConfigName(configName)
 		viper.AddConfigPath("./configs")
 		viper.AddConfigPath("../configs")
@@ -157,8 +175,9 @@ func loadConfigFile() error {
 
 	// 读取配置文件
 	if err := viper.ReadInConfig(); err != nil {
-		return fmt.Errorf("failed to read config file: %w", err)
+		return fmt.Errorf("读取配置文件失败: %w", err)
 	}
+	fmt.Printf("成功加载配置文件: %s\n", viper.ConfigFileUsed())
 
 	return nil
 }
@@ -176,43 +195,83 @@ func loadConfigFile() error {
 // - JWT_SECRET: jwt.secret
 // - LOG_LEVEL: logger.level
 func processEnvVars() {
+	fmt.Println("========== 开始处理环境变量 ==========")
+	
 	// 数据库配置
 	if host := os.Getenv("DB_HOST"); host != "" {
+		fmt.Printf("从环境变量读取 DB_HOST: %s\n", host)
 		viper.Set("mysql.host", host)
+	} else {
+		fmt.Println("未找到环境变量 DB_HOST")
 	}
+	
 	if port := os.Getenv("DB_PORT"); port != "" {
+		fmt.Printf("从环境变量读取 DB_PORT: %s\n", port)
 		viper.Set("mysql.port", port)
+	} else {
+		fmt.Println("未找到环境变量 DB_PORT")
 	}
+	
 	if user := os.Getenv("DB_USER"); user != "" {
+		fmt.Printf("从环境变量读取 DB_USER: %s\n", user)
 		viper.Set("mysql.username", user)
+	} else {
+		fmt.Println("未找到环境变量 DB_USER")
 	}
+	
 	if pass := os.Getenv("DB_PASSWORD"); pass != "" {
+		fmt.Println("从环境变量读取 DB_PASSWORD: ******")
 		viper.Set("mysql.password", pass)
+	} else {
+		fmt.Println("未找到环境变量 DB_PASSWORD")
 	}
+	
 	if name := os.Getenv("DB_NAME"); name != "" {
+		fmt.Printf("从环境变量读取 DB_NAME: %s\n", name)
 		viper.Set("mysql.database", name)
+	} else {
+		fmt.Println("未找到环境变量 DB_NAME")
 	}
 
 	// Redis配置
 	if host := os.Getenv("REDIS_HOST"); host != "" {
+		fmt.Printf("从环境变量读取 REDIS_HOST: %s\n", host)
 		viper.Set("redis.host", host)
+	} else {
+		fmt.Println("未找到环境变量 REDIS_HOST")
 	}
+	
 	if port := os.Getenv("REDIS_PORT"); port != "" {
+		fmt.Printf("从环境变量读取 REDIS_PORT: %s\n", port)
 		viper.Set("redis.port", port)
+	} else {
+		fmt.Println("未找到环境变量 REDIS_PORT")
 	}
+	
 	if pass := os.Getenv("REDIS_PASSWORD"); pass != "" {
+		fmt.Println("从环境变量读取 REDIS_PASSWORD: ******")
 		viper.Set("redis.password", pass)
+	} else {
+		fmt.Println("未找到环境变量 REDIS_PASSWORD")
 	}
 
 	// JWT配置
 	if secret := os.Getenv("JWT_SECRET"); secret != "" {
+		fmt.Println("从环境变量读取 JWT_SECRET: ******")
 		viper.Set("jwt.secret", secret)
+	} else {
+		fmt.Println("未找到环境变量 JWT_SECRET")
 	}
 
 	// 日志配置
 	if level := os.Getenv("LOG_LEVEL"); level != "" {
+		fmt.Printf("从环境变量读取 LOG_LEVEL: %s\n", level)
 		viper.Set("logger.level", level)
+	} else {
+		fmt.Println("未找到环境变量 LOG_LEVEL")
 	}
+
+	fmt.Println("========== 环境变量处理完成 ==========")
 }
 
 // bindEnvVariables 绑定环境变量
@@ -245,7 +304,7 @@ func validateConfig(cfg *Config) error {
 	}
 
 	if len(missingVars) > 0 {
-		return fmt.Errorf("missing required environment variables: %v", missingVars)
+		return fmt.Errorf("缺少必要的环境变量: %v", missingVars)
 	}
 
 	// 验证数据库配置
