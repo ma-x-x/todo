@@ -15,17 +15,53 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22'
+        
+    # 缓存 Go modules
+    - name: Go Module Cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+        
+    - name: Download dependencies
+      run: go mod download
+        
+    - name: Install swag
+      run: go install github.com/swaggo/swag/cmd/swag@latest
+        
+    # Swagger 文档生成
+    - name: Generate Swagger Docs
+      run: |
+        rm -rf docs/
+        swag init -g cmd/server/main.go --parseDependency --parseInternal --parseDepth 1
+        
+    # 构建优化：添加版本信息和构建时间
+    - name: Build
+      run: |
+        rm -f build/todo-api
+        CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w \
+          -X main.Version=${{ github.sha }} \
+          -X main.BuildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')" \
+          -o build/todo-api cmd/server/main.go
+        
     - name: Create deployment directory
       run: |
         mkdir -p deployment/configs
         mkdir -p deployment/scripts
-        cp -r configs/ deployment/configs/
-        cp -r deployments/docker/docker-compose.prod.yml deployment/docker-compose.yml
-        cp -r deployments/docker/Dockerfile deployment/
-        cp -r deployments/scripts/deploy.sh deployment/
-        cp -r scripts/init.sql deployment/scripts/
-        # 复制源代码和构建文件
-        cp -r . deployment/src/
+        cp build/todo-api deployment/
+        cp configs/config.prod.yaml deployment/configs/
+        cp deployments/docker/docker-compose.prod.yml deployment/docker-compose.yml
+        cp deployments/docker/Dockerfile deployment/
+        cp deployments/scripts/deploy.sh deployment/
+        cp scripts/init.sql deployment/scripts/
         chmod +x deployment/deploy.sh
         
     - name: Copy files to server
