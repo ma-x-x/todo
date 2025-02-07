@@ -170,8 +170,8 @@ fi
 
 # 停止并重新启动应用
 echo "正在重新部署应用..."
-docker-compose rm -sf app || true
-docker-compose up -d app
+docker-compose build --no-cache app
+docker-compose up -d --force-recreate app
 
 # 等待应用就绪
 echo "等待应用就绪..."
