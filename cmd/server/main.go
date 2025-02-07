@@ -43,7 +43,7 @@ import (
 // 程序入口函数
 func main() {
 	if err := run(); err != nil {
-		log.Fatalf("应用程序启动失败: %v", err)
+		log.Fatalf("***应用程序启动失败***: %v", err)
 	}
 }
 
