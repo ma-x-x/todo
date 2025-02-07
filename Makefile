@@ -1,4 +1,4 @@
-.PHONY: dev build test clean deps swagger init-db init-db-with-credentials
+.PHONY: dev build test clean deps swagger init-db init-db-with-credentials deploy check-env logs status
 
 # 变量定义
 APP_NAME=todo-api
@@ -71,4 +71,23 @@ init-db-with-credentials:
 	read -s -p "Enter MySQL password: " password; \
 	echo ""; \
 	mysql -u $$username -p$$password < scripts/init.sql
-	@echo "Database initialization completed" 
+	@echo "Database initialization completed"
+
+# 检查必要的环境变量
+check-env:
+	@if [ ! -f .env ]; then \
+		echo "Error: .env file not found. Please copy .env.example to .env and fill in the values."; \
+		exit 1; \
+	fi
+
+# 部署应用
+deploy: check-env
+	./deployments/scripts/deploy.sh
+
+# 显示日志
+logs:
+	docker-compose -f deployments/docker/docker-compose.prod.yml logs -f
+
+# 显示状态
+status:
+	docker-compose -f deployments/docker/docker-compose.prod.yml ps 
