@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -68,26 +70,114 @@ type Config struct {
 
 // LoadConfig 加载配置文件
 func LoadConfig() (*Config, error) {
-	viper.AutomaticEnv()
-	viper.SetEnvPrefix("APP")
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("./configs")
+	// 1. 设置默认值
+	setDefaults()
 
-	// 添加调试日志
-	fmt.Printf("Looking for config file in: %s\n", viper.ConfigFileUsed())
-
-	if err := viper.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+	// 2. 读取配置文件
+	if err := loadConfigFile(); err != nil {
+		return nil, err
 	}
 
+	// 3. 绑定环境变量
+	bindEnvVariables()
+
+	// 4. 解析配置到结构体
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	// 打印数据库配置
-	fmt.Printf("MySQL Config: %+v\n", config.MySQL)
+	// 5. 验证必要的配置
+	if err := validateConfig(&config); err != nil {
+		return nil, err
+	}
 
 	return &config, nil
+}
+
+// setDefaults 设置默认配置值
+func setDefaults() {
+	viper.SetDefault("server.mode", "debug")
+	viper.SetDefault("server.port", 8080)
+	viper.SetDefault("server.read_timeout", 10)
+	viper.SetDefault("server.write_timeout", 10)
+
+	viper.SetDefault("mysql.max_idle_conns", 10)
+	viper.SetDefault("mysql.max_open_conns", 100)
+	viper.SetDefault("mysql.conn_max_lifetime", "1h")
+
+	viper.SetDefault("redis.db", 0)
+	viper.SetDefault("redis.pool_size", 10)
+
+	viper.SetDefault("logger.level", "info")
+	viper.SetDefault("logger.file", "logs/app.log")
+}
+
+// loadConfigFile 加载配置文件
+func loadConfigFile() error {
+	viper.SetConfigType("yaml")
+
+	// 获取配置文件路径
+	configFile := os.Getenv("CONFIG_FILE")
+	if configFile != "" {
+		viper.SetConfigFile(configFile)
+	} else {
+		// 根据环境选择配置文件
+		env := os.Getenv("APP_ENV")
+		if env == "" {
+			env = "dev" // 默认开发环境
+		}
+
+		configName := fmt.Sprintf("config.%s.yaml", env) // 添加.yaml后缀
+		viper.SetConfigName(configName)
+		viper.AddConfigPath("./configs")
+		viper.AddConfigPath("../configs")  // 添加上级目录
+		viper.AddConfigPath("/app/configs")
+	}
+
+	// 读取配置文件
+	if err := viper.ReadInConfig(); err != nil {
+		// 如果是开发环境，尝试使用默认配置文件
+		if os.Getenv("APP_ENV") == "" || os.Getenv("APP_ENV") == "dev" {
+			viper.SetConfigName("config")  // 尝试读取无环境后缀的配置
+			if err := viper.ReadInConfig(); err != nil {
+				return fmt.Errorf("failed to read config file: %w", err)
+			}
+			return nil
+		}
+		return fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	return nil
+}
+
+// bindEnvVariables 绑定环境变量
+func bindEnvVariables() {
+	// 自动绑定环境变量，环境变量格式为：APP_SERVER_PORT
+	viper.SetEnvPrefix("APP")
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// 显式绑定关键环境变量
+	viper.BindEnv("mysql.password", "DB_PASSWORD")
+	viper.BindEnv("mysql.host", "DB_HOST")
+	viper.BindEnv("mysql.port", "DB_PORT")
+	viper.BindEnv("mysql.username", "DB_USER")
+	viper.BindEnv("mysql.database", "DB_NAME")
+	
+	viper.BindEnv("jwt.secret", "JWT_SECRET")
+	viper.BindEnv("server.port", "SERVER_PORT")
+	viper.BindEnv("server.mode", "SERVER_MODE")
+}
+
+// validateConfig 验证配置
+func validateConfig(cfg *Config) error {
+	// 验证必要的配置项
+	if cfg.MySQL.Password == "" {
+		return fmt.Errorf("database password is required")
+	}
+	if cfg.JWT.Secret == "" {
+		return fmt.Errorf("JWT secret is required")
+	}
+	return nil
 }

@@ -1,21 +1,39 @@
-app:
-  name: "todo-api"
-  version: "1.0.0"
+server:
   mode: "production"
-  port: 8080
+  port: ${SERVER_PORT:-8081}
+  read_timeout: ${READ_TIMEOUT:-10}
+  write_timeout: ${WRITE_TIMEOUT:-10}
   
 mysql:
-  host: "mysql"        # 使用 docker-compose 中的服务名
-  port: 3306
-  username: "todo_user"
-  password: "${DB_PASSWORD}"  # 将从环境变量获取
-  database: "todo_db"
-  max_idle_conns: 10
-  max_open_conns: 100
-  conn_max_lifetime: "1h"
+  host: ${DB_HOST:-mysql}
+  port: ${DB_PORT:-3306}
+  username: ${DB_USER:-todo_user}
+  password: ${DB_PASSWORD}
+  database: ${DB_NAME:-todo_db}
+  max_idle_conns: ${DB_MAX_IDLE_CONNS:-10}
+  max_open_conns: ${DB_MAX_OPEN_CONNS:-100}
+  conn_max_lifetime: ${DB_CONN_MAX_LIFETIME:-"1h"}
 
 redis:
-  host: "redis"        # 使用 docker-compose 中的服务名
-  port: 6379
-  password: ""
-  db: 0 
+  host: ${REDIS_HOST:-redis}
+  port: ${REDIS_PORT:-6379}
+  password: ${REDIS_PASSWORD}
+  db: ${REDIS_DB:-0}
+  pool_size: ${REDIS_POOL_SIZE:-10}
+
+jwt:
+  secret: ${JWT_SECRET}
+  expire_hours: ${JWT_EXPIRE_HOURS:-24}
+  issuer: ${JWT_ISSUER:-"todo-api"}
+
+logger:
+  level: ${LOG_LEVEL:-info}
+  file: ${LOG_FILE:-/app/logs/app.log}
+
+rate_limit:
+  requests_per_second: ${RATE_LIMIT_RPS:-100}
+  burst: ${RATE_LIMIT_BURST:-50}
+
+task_queue:
+  buffer_size: ${TASK_QUEUE_SIZE:-1000}
+  workers: ${TASK_WORKERS:-5} 

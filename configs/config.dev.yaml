@@ -1,0 +1,40 @@
+# 开发环境配置
+server:
+  mode: "debug"
+  port: 8080
+  read_timeout: 10
+  write_timeout: 10
+  
+mysql:
+  host: "localhost"
+  port: 3306
+  username: "root"
+  password: "root"  # 开发环境可以使用简单密码
+  database: "todo_db"
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: "1h"
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+  pool_size: 10
+
+jwt:
+  secret: "dev-secret-key"  # 开发环境的密钥
+  expire_hours: 24
+  issuer: "todo-api"
+
+logger:
+  level: "debug"
+  file: "logs/app.log"
+
+rate_limit:
+  requests_per_second: 100
+  burst: 50
+
+task_queue:
+  buffer_size: 1000
+  workers: 5 

@@ -1,3 +1,8 @@
+-- 设置 SQL 模式以允许某些操作失败时继续执行
+SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
+SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
+SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL,ALLOW_INVALID_DATES';
+
 -- 创建数据库
 CREATE DATABASE IF NOT EXISTS todo_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -62,4 +67,9 @@ CREATE TABLE IF NOT EXISTS reminders (
 CREATE INDEX idx_reminders_todo_id ON reminders(todo_id);
 CREATE INDEX idx_reminders_remind_at ON reminders(remind_at);
 CREATE INDEX idx_reminders_todo_remind ON reminders(todo_id, deleted_at);
-CREATE INDEX idx_reminders_remind_status ON reminders(remind_at, status, deleted_at); 
+CREATE INDEX idx_reminders_remind_status ON reminders(remind_at, status, deleted_at);
+
+-- 恢复 SQL 模式
+SET SQL_MODE=@OLD_SQL_MODE;
+SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
+SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS; 

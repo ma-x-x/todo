@@ -106,6 +106,23 @@ wait_for_mysql() {
 docker-compose up -d mysql redis
 wait_for_mysql
 
+# 初始化数据库
+echo "Initializing database..."
+MYSQL_CONTAINER=$(docker-compose ps -q mysql)
+
+# 创建数据库用户
+docker exec $MYSQL_CONTAINER mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "
+CREATE DATABASE IF NOT EXISTS todo_db;
+CREATE USER IF NOT EXISTS 'todo_user'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+GRANT ALL PRIVILEGES ON todo_db.* TO 'todo_user'@'%';
+FLUSH PRIVILEGES;
+"
+
+# 导入初始化 SQL
+echo "Importing database schema..."
+docker cp scripts/init.sql $MYSQL_CONTAINER:/tmp/init.sql
+docker exec $MYSQL_CONTAINER mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" todo_db -e "source /tmp/init.sql"
+
 # 启动应用
 docker-compose up -d app
 
@@ -116,14 +133,5 @@ docker-compose ps
 # 检查应用日志
 echo "Checking application logs..."
 docker-compose logs --tail=50 app
-
-# 创建应用数据库用户
-MYSQL_CONTAINER=$(docker-compose ps -q mysql)
-docker exec $MYSQL_CONTAINER mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "
-CREATE DATABASE IF NOT EXISTS todo_db;
-CREATE USER IF NOT EXISTS 'todo_user'@'%' IDENTIFIED BY '${DB_PASSWORD}';
-GRANT ALL PRIVILEGES ON todo_db.* TO 'todo_user'@'%';
-FLUSH PRIVILEGES;
-"
 
 echo "Deployment completed successfully!" 
