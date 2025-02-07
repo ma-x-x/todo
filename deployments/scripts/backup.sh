@@ -7,16 +7,16 @@ DATE=$(date +%Y%m%d_%H%M%S)
 # 创建备份目录
 mkdir -p "$BACKUP_DIR"
 
-# MySQL 备份
-echo "Backing up MySQL database..."
+# MySQL 数据库备份
+echo "正在备份 MySQL 数据库..."
 docker exec todo-api_mysql_1 mysqldump -u root -proot todo_db > "$BACKUP_DIR/mysql_$DATE.sql"
 
-# Redis 备份
-echo "Backing up Redis data..."
+# Redis 数据备份
+echo "正在备份 Redis 数据..."
 docker exec todo-api_redis_1 redis-cli SAVE
 cp /data/redis/dump.rdb "$BACKUP_DIR/redis_$DATE.rdb"
 
-# 保留最近7天的备份
+# 删除7天前的备份文件
 find "$BACKUP_DIR" -type f -mtime +7 -delete
 
-echo "Backup completed successfully!" 
+echo "备份完成！" 

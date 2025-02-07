@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# 检查 root 权限
+# 检查是否具有 root 权限
 if [ "$EUID" -ne 0 ]; then
-    echo "Please run as root"
+    echo "请使用 root 权限运行此脚本"
     exit 1
 fi
 
 # 设置系统参数
-echo "Setting up system parameters..."
+echo "正在设置系统参数..."
 
 # 创建系统参数配置文件
 cat > /etc/sysctl.d/99-redis.conf << EOF
@@ -19,14 +19,14 @@ EOF
 # 应用系统参数
 sysctl -p /etc/sysctl.d/99-redis.conf
 
-# 禁用 THP
+# 禁用透明大页面(THP)
 echo never > /sys/kernel/mm/transparent_hugepage/enabled
 echo never > /sys/kernel/mm/transparent_hugepage/defrag
 
-# 创建 systemd 服务来持久化 THP 设置
+# 创建 systemd 服务以持久化 THP 设置
 cat > /etc/systemd/system/disable-thp.service << EOF
 [Unit]
-Description=Disable Transparent Huge Pages (THP)
+Description=禁用透明大页面(THP)
 
 [Service]
 Type=oneshot
@@ -42,4 +42,4 @@ systemctl daemon-reload
 systemctl enable disable-thp
 systemctl start disable-thp
 
-echo "System parameters setup completed" 
+echo "系统参数设置完成" 

@@ -101,6 +101,8 @@ jobs:
       env:
         MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        DB_HOST: "mysql"
+        DB_USER: "todo_user"
         JWT_SECRET: ${{ secrets.JWT_SECRET }}
         REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
         APP_ENV: prod
@@ -110,7 +112,7 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         password: ${{ secrets.SERVER_PASSWORD }}
         port: ${{ secrets.SERVER_PORT }}
-        envs: MYSQL_ROOT_PASSWORD,DB_PASSWORD,JWT_SECRET,REDIS_PASSWORD,APP_ENV,LOG_LEVEL
+        envs: MYSQL_ROOT_PASSWORD,DB_PASSWORD,DB_HOST,DB_USER,JWT_SECRET,REDIS_PASSWORD,APP_ENV,LOG_LEVEL
         script: |
           cd /opt/todo-api
           export MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD}"
