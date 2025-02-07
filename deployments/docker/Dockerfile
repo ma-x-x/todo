@@ -13,12 +13,18 @@ ENV GO111MODULE=on \
 # 设置 Alpine 镜像源为阿里云镜像（构建阶段也需要）
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 
+# 安装 swag
+RUN go install github.com/swaggo/swag/cmd/swag@latest
+
 # 首先仅复制依赖配置文件
 COPY go.mod go.sum ./
 RUN go mod download
 
 # 复制所有源代码到容器中
 COPY . .
+
+# 生成 Swagger 文档
+RUN swag init -g cmd/server/main.go --parseDependency --parseInternal --parseDepth 1
 
 # 构建Go应用
 RUN go build -ldflags="-s -w" -o /app/build/todo-api cmd/server/main.go
@@ -47,6 +53,7 @@ ENV TZ=Asia/Shanghai
 
 # 从构建阶段复制编译好的二进制文件和配置文件
 COPY --from=builder /app/build/todo-api .
+COPY --from=builder /app/docs ./docs
 COPY configs/ ./configs/
 
 # 声明容器将使用的端口
