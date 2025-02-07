@@ -183,4 +183,29 @@ docker-compose ps
 echo "Checking application logs..."
 docker-compose logs --tail=50 app
 
-echo "Deployment completed successfully!" 
+echo "Deployment completed successfully!"
+
+# 检查系统参数
+check_system_params() {
+    echo "Checking system parameters..."
+    
+    # 检查 vm.overcommit_memory
+    if [ "$(sysctl -n vm.overcommit_memory)" != "1" ]; then
+        echo "Warning: vm.overcommit_memory is not set to 1"
+    fi
+    
+    # 检查 somaxconn
+    if [ "$(sysctl -n net.core.somaxconn)" -lt "512" ]; then
+        echo "Warning: net.core.somaxconn is less than 512"
+    fi
+    
+    # 检查 THP
+    if [ -f /sys/kernel/mm/transparent_hugepage/enabled ]; then
+        if ! grep -q "\[never\]" /sys/kernel/mm/transparent_hugepage/enabled; then
+            echo "Warning: Transparent Huge Pages (THP) is not set to never"
+        fi
+    fi
+}
+
+# 在部署前检查系统参数
+check_system_params 
