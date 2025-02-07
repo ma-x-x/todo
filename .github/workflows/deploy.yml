@@ -107,12 +107,13 @@ jobs:
         REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
         APP_ENV: prod
         LOG_LEVEL: debug
+        TZ: Asia/Shanghai
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
         password: ${{ secrets.SERVER_PASSWORD }}
         port: ${{ secrets.SERVER_PORT }}
-        envs: MYSQL_ROOT_PASSWORD,DB_PASSWORD,DB_HOST,DB_USER,JWT_SECRET,REDIS_PASSWORD,APP_ENV,LOG_LEVEL
+        envs: MYSQL_ROOT_PASSWORD,DB_PASSWORD,DB_HOST,DB_USER,JWT_SECRET,REDIS_PASSWORD,APP_ENV,LOG_LEVEL,TZ
         script: |
           cd /opt/todo-api
           export MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD}"

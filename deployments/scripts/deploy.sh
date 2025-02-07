@@ -69,6 +69,7 @@ export JWT_SECRET=${JWT_SECRET}
 export APP_ENV=prod
 export LOG_LEVEL=debug
 export CONFIG_FILE=/app/configs/config.prod.yaml
+export TZ=Asia/Shanghai  # 设置时区为中国时区
 
 # 检查服务是否已经存在并运行
 check_service_exists() {

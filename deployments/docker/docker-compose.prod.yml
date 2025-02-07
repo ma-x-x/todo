@@ -22,6 +22,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - CONFIG_FILE=/app/configs/config.prod.yaml
       - APP_ENV=prod
+      - TZ=Asia/Shanghai
     depends_on:
       mysql:
         condition: service_healthy
@@ -30,6 +31,8 @@ services:
     volumes:
       - ./configs:/app/configs
       - ./logs:/app/logs
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     networks:
       - todo-network
     healthcheck:
@@ -49,8 +52,11 @@ services:
       - MYSQL_DATABASE=todo_db
       - MYSQL_USER=todo_user
       - MYSQL_PASSWORD=${DB_PASSWORD}
+      - TZ=Asia/Shanghai
     volumes:
       - mysql_data:/var/lib/mysql
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     networks:
       - todo-network
     command: --default-authentication-plugin=mysql_native_password
@@ -76,6 +82,11 @@ services:
       retries: 5
     networks:
       - todo-network
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
 
 networks:
   todo-network:

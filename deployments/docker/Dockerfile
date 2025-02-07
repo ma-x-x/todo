@@ -38,6 +38,10 @@ COPY configs/ ./configs/
 # 创建日志目录
 RUN mkdir -p /app/logs
 
+# 设置时区
+RUN apk add --no-cache tzdata
+ENV TZ=Asia/Shanghai
+
 # 声明容器将使用的端口
 # 这只是一个文档说明，实际上不会自动打开端口
 EXPOSE 8080

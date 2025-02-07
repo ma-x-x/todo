@@ -46,6 +46,9 @@ func Init(cfg config.LoggerConfig) error {
 	zerolog.MessageFieldName = "消息"
 	zerolog.ErrorFieldName = "错误"
 
+	// 设置时间格式
+	zerolog.TimeFieldFormat = time.RFC3339Nano
+
 	// 自定义日志级别显示
 	zerolog.LevelDebugValue = "调试"
 	zerolog.LevelInfoValue = "信息"
@@ -54,7 +57,7 @@ func Init(cfg config.LoggerConfig) error {
 	zerolog.LevelFatalValue = "致命"
 
 	// 初始化日志对象
-	log = zerolog.New(output).With().Timestamp().Logger()
+	log = zerolog.New(output).With().Timestamp().Logger().Hook(TimezoneHook{})
 
 	return nil
 }
@@ -139,4 +142,11 @@ func LogSystemEvent(event string, details string) {
 		Str("事件", event).
 		Str("详情", details).
 		Msg("系统事件")
+}
+
+// TimezoneHook 用于确保时间戳使用正确的时区
+type TimezoneHook struct{}
+
+func (h TimezoneHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
+	e.Time("时间", time.Now().In(time.Local))
 }
