@@ -67,7 +67,7 @@ export REDIS_PORT=6379
 export REDIS_PASSWORD=${REDIS_PASSWORD}
 export JWT_SECRET=${JWT_SECRET}
 export APP_ENV=prod
-export LOG_LEVEL=info
+export LOG_LEVEL=debug
 export CONFIG_FILE=/app/configs/config.prod.yaml
 
 # 检查服务是否已经存在并运行

@@ -138,8 +138,11 @@ func setDefaults() {
 	viper.SetDefault("redis.db", 0)
 	viper.SetDefault("redis.pool_size", 10)
 
-	viper.SetDefault("logger.level", "info")
+	viper.SetDefault("logger.level", "debug")
 	viper.SetDefault("logger.file", "logs/app.log")
+
+	viper.SetDefault("jwt.expire_hours", 1)
+	viper.SetDefault("jwt.issuer", "todo_app")
 }
 
 // loadConfigFile 加载配置文件
