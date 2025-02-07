@@ -3,6 +3,31 @@
 # 确保脚本在出错时退出
 set -e
 
+# 检查并设置系统参数
+setup_system_params() {
+    echo "Setting up system parameters..."
+    
+    # 设置 vm.overcommit_memory
+    if [ "$(sysctl -n vm.overcommit_memory)" != "1" ]; then
+        echo "Setting vm.overcommit_memory = 1"
+        sudo sysctl -w vm.overcommit_memory=1
+        echo "vm.overcommit_memory = 1" | sudo tee -a /etc/sysctl.conf
+    fi
+    
+    # 设置 somaxconn
+    if [ "$(sysctl -n net.core.somaxconn)" -lt "512" ]; then
+        echo "Setting net.core.somaxconn = 512"
+        sudo sysctl -w net.core.somaxconn=512
+        echo "net.core.somaxconn = 512" | sudo tee -a /etc/sysctl.conf
+    fi
+    
+    # 禁用 THP (Transparent Huge Pages)
+    if [ -f /sys/kernel/mm/transparent_hugepage/enabled ]; then
+        echo never | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
+        echo never | sudo tee /sys/kernel/mm/transparent_hugepage/defrag
+    fi
+}
+
 # 检查必要的环境变量
 check_required_env() {
     local missing_vars=()
@@ -26,6 +51,9 @@ check_required_env() {
 
 # 检查环境变量
 check_required_env
+
+# 设置系统参数
+setup_system_params
 
 # 设置环境变量
 export MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}

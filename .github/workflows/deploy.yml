@@ -56,6 +56,22 @@ jobs:
         target: "/opt/todo-api"
         strip_components: 1
         
+    - name: Setup system parameters
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT }}
+        script: |
+          cd /opt/todo-api
+          sudo bash -c '
+          sysctl -w vm.overcommit_memory=1
+          sysctl -w net.core.somaxconn=512
+          echo never > /sys/kernel/mm/transparent_hugepage/enabled
+          echo never > /sys/kernel/mm/transparent_hugepage/defrag
+          '
+    
     - name: Execute deployment script
       uses: appleboy/ssh-action@v1.0.3
       env:

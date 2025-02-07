@@ -65,7 +65,15 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    sysctls:
+      net.core.somaxconn: '512'
+    command: >
+      bash -c '
+      echo never > /sys/kernel/mm/transparent_hugepage/enabled || true;
+      echo never > /sys/kernel/mm/transparent_hugepage/defrag || true;
+      sysctl -w vm.overcommit_memory=1 || true;
+      redis-server --requirepass "${REDIS_PASSWORD}" --appendonly yes
+      '
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 5s
@@ -73,6 +81,8 @@ services:
       retries: 5
     networks:
       - todo-network
+    ulimits:
+      memlock: -1
 
 networks:
   todo-network:
