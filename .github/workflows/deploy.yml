@@ -58,25 +58,25 @@ jobs:
         
     - name: Execute deployment script
       uses: appleboy/ssh-action@v1.0.3
+      env:
+        MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+        APP_ENV: prod
+        LOG_LEVEL: info
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
         password: ${{ secrets.SERVER_PASSWORD }}
         port: ${{ secrets.SERVER_PORT }}
         envs: MYSQL_ROOT_PASSWORD,DB_PASSWORD,JWT_SECRET,REDIS_PASSWORD,APP_ENV,LOG_LEVEL
-        environment: |
-          MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
-          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          JWT_SECRET=${{ secrets.JWT_SECRET }}
-          REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD || '' }}
-          APP_ENV=prod
-          LOG_LEVEL=info
         script: |
           cd /opt/todo-api
           export MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD}"
           export DB_PASSWORD="${DB_PASSWORD}"
           export JWT_SECRET="${JWT_SECRET}"
-          export REDIS_PASSWORD="${REDIS_PASSWORD}"
+          export REDIS_PASSWORD="${REDIS_PASSWORD:-''}"
           export APP_ENV="prod"
           export LOG_LEVEL="info"
           chmod +x deploy.sh
