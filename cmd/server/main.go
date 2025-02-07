@@ -54,7 +54,7 @@ func run() error {
 	// 从配置文件中读取应用所需的各项配置
 	cfg, err := config.LoadConfig()
 	// 输出配置
-	fmt.Printf("配置文件: %+v\n", cfg)
+	fmt.Errorf("配置文件: %+v\n", cfg)
 	if err != nil {
 		return fmt.Errorf("加载配置文件失败: %w", err)
 	}
