@@ -128,7 +128,7 @@ func UpdateReminder(reminderService service.ReminderService) gin.HandlerFunc {
 
 		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, "Invalid ID"))
+			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, "无效的ID"))
 			return
 		}
 
@@ -141,7 +141,7 @@ func UpdateReminder(reminderService service.ReminderService) gin.HandlerFunc {
 		// 获取更新后的完整数据
 		updatedReminder, err := reminderService.Get(c.Request.Context(), uint(id), userID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, "Failed to fetch updated reminder"))
+			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, "获取更新后的提醒失败"))
 			return
 		}
 
@@ -165,7 +165,7 @@ func DeleteReminder(reminderService service.ReminderService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, "Invalid ID"))
+			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, "无效的ID"))
 			return
 		}
 
@@ -176,7 +176,7 @@ func DeleteReminder(reminderService service.ReminderService) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, response.Success(reminder.UpdateResponse{
-			Message: "Reminder deleted successfully",
+			Message: "提醒已成功删除",
 		}))
 	}
 }

@@ -76,58 +76,43 @@ type Config struct {
 
 // LoadConfig 加载配置文件
 // 配置加载流程：
-// 1. 设置默认值
-// 2. 绑定环境变量
-// 3. 读取配置文件
-// 4. 处理环境变量覆盖
-// 5. 解析配置到结构体
-// 6. 验证必要的配置
+// 1. 设置配置文件路径
+// 2. 设置默认值和环境变量绑定
+// 3. 设置并读取配置文件
+// 4. 解析配置到结构体
+// 5. 验证必要的配置
 func LoadConfig() (*Config, error) {
-	fmt.Println("\n========== 开始加载配置 ==========")
-	
-	// 1. 设置默认值
-	fmt.Println("1. 设置默认值")
-	setDefaults()
-
-	// 2. 绑定环境变量
-	fmt.Println("2. 绑定环境变量")
-	bindEnvVariables()
-
-	// 3. 读取配置文件
-	fmt.Println("3. 读取配置文件")
-	if err := loadConfigFile(); err != nil {
-		return nil, err
+	// 设置配置文件路径
+	configFile := os.Getenv("CONFIG_FILE")
+	if configFile == "" {
+		configFile = "configs/config.yaml"
 	}
 
-	// 4. 处理环境变量替换
-	fmt.Println("4. 处理环境变量替换")
-	processEnvVars()
+	// 设置默认值和环境变量绑定
+	setDefaults()
+	bindEnvVariables()
 
-	// 5. 解析配置到结构体
-	fmt.Println("5. 解析配置到结构体")
-	var config Config
-	if err := viper.Unmarshal(&config); err != nil {
+	// 设置并读取配置文件
+	viper.SetConfigType("yaml")
+	viper.SetConfigFile(configFile)
+	if err := viper.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("读取配置文件失败: %w", err)
+	}
+
+	var cfg Config
+	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("解析配置文件失败: %w", err)
 	}
 
-	// 6. 验证必要的配置
-	fmt.Println("6. 验证必要的配置")
-	if err := validateConfig(&config); err != nil {
-		return nil, err
+	// 验证配置
+	if err := validateConfig(&cfg); err != nil {
+		return nil, fmt.Errorf("配置验证失败: %w", err)
 	}
 
-	// 验证服务器模式
-	if config.Server.Mode != "debug" && config.Server.Mode != "release" && config.Server.Mode != "test" {
-		log.Printf("警告：配置文件中的服务器模式 '%s' 无效，使用默认的 'release' 模式", config.Server.Mode)
-		config.Server.Mode = "release"
-	}
+	log.Printf("配置加载成功 [模式:%s] [端口:%d] [日志级别:%s]", 
+		cfg.Server.Mode, cfg.Server.Port, cfg.Logger.Level)
 
-	// 打印最终配置
-	fmt.Printf("\n最终 MySQL 配置: %+v\n", config.MySQL)
-	fmt.Printf("最终 Redis 配置: %+v\n", config.Redis)
-	fmt.Println("========== 配置加载完成 ==========\n")
-
-	return &config, nil
+	return &cfg, nil
 }
 
 // setDefaults 设置默认配置值
@@ -150,46 +135,6 @@ func setDefaults() {
 
 	viper.SetDefault("jwt.expire_hours", 1)
 	viper.SetDefault("jwt.issuer", "todo_app")
-}
-
-// loadConfigFile 加载配置文件
-// 配置文件加载优先级：
-// 1. CONFIG_FILE 环境变量指定的文件
-// 2. 基于 APP_ENV 的配置文件（如 config.prod.yaml）
-// 3. 在以下路径查找：./configs、../configs、/app/configs
-func loadConfigFile() error {
-	viper.SetConfigType("yaml")
-
-	// 获取配置文件路径
-	configFile := os.Getenv("CONFIG_FILE")
-	if configFile != "" {
-		fmt.Printf("使用 CONFIG_FILE 环境变量指定的配置文件: %s\n", configFile)
-		viper.SetConfigFile(configFile)
-	} else {
-		// 根据环境选择配置文件
-		env := os.Getenv("APP_ENV")
-		if env == "" {
-			env = "dev" // 默认开发环境
-			fmt.Println("未设置 APP_ENV，使用默认环境: dev")
-		} else {
-			fmt.Printf("使用 APP_ENV 环境: %s\n", env)
-		}
-
-		configName := fmt.Sprintf("config.%s.yaml", env)
-		fmt.Printf("尝试加载配置文件: %s\n", configName)
-		viper.SetConfigName(configName)
-		viper.AddConfigPath("./configs")
-		viper.AddConfigPath("../configs")
-		viper.AddConfigPath("/app/configs")
-	}
-
-	// 读取配置文件
-	if err := viper.ReadInConfig(); err != nil {
-		return fmt.Errorf("读取配置文件失败: %w", err)
-	}
-	fmt.Printf("成功加载配置文件: %s\n", viper.ConfigFileUsed())
-
-	return nil
 }
 
 // processEnvVars 处理环境变量替换
@@ -329,6 +274,12 @@ func validateConfig(cfg *Config) error {
 	}
 	if cfg.MySQL.Database == "" {
 		cfg.MySQL.Database = "todo_db"  // 默认值
+	}
+
+	// 验证服务器模式
+	if cfg.Server.Mode != "debug" && cfg.Server.Mode != "release" && cfg.Server.Mode != "test" {
+		log.Printf("警告：配置文件中的服务器模式 '%s' 无效，使用默认的 'release' 模式", cfg.Server.Mode)
+		cfg.Server.Mode = "release"
 	}
 
 	return nil

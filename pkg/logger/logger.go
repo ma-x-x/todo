@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"todo/pkg/config"
@@ -16,38 +17,20 @@ var log zerolog.Logger
 func Init(cfg config.LoggerConfig) error {
 	// 设置日志级别
 	level, err := zerolog.ParseLevel(cfg.Level)
-	fmt.Errorf("日志级别: %v\n", level)
 	if err != nil {
-		return fmt.Errorf("无效的日志级别: %v", err)
+		return fmt.Errorf("无效的日志级别: %w", err)
 	}
 	zerolog.SetGlobalLevel(level)
 
-	// 设置输出
-	var output *os.File
-	if cfg.File != "" {
-		// 确保日志目录存在
-		logDir := filepath.Dir(cfg.File)
-		if err := os.MkdirAll(logDir, 0755); err != nil {
-			return fmt.Errorf("创建日志目录失败: %v", err)
-		}
-
-		// 打开日志文件
-		output, err = os.OpenFile(cfg.File, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
-		if err != nil {
-			return fmt.Errorf("打开日志文件失败: %v", err)
-		}
-	} else {
-		output = os.Stdout
-	}
+	// 配置输出
+	output := configureOutput(cfg.File)
 
 	// 设置日志格式
-	zerolog.TimestampFieldName = "时间"
-	zerolog.LevelFieldName = "级别"
-	zerolog.MessageFieldName = "消息"
-	zerolog.ErrorFieldName = "错误"
-
-	// 设置时间格式
-	zerolog.TimeFieldFormat = time.RFC3339Nano
+	zerolog.TimestampFieldName = "timestamp"
+	zerolog.LevelFieldName = "level"
+	zerolog.MessageFieldName = "message"
+	zerolog.ErrorFieldName = "error"
+	zerolog.TimeFieldFormat = time.RFC3339
 
 	// 自定义日志级别显示
 	zerolog.LevelDebugValue = "调试"
@@ -60,6 +43,25 @@ func Init(cfg config.LoggerConfig) error {
 	log = zerolog.New(output).With().Timestamp().Logger().Hook(TimezoneHook{})
 
 	return nil
+}
+
+func configureOutput(filePath string) io.Writer {
+	if filePath == "" {
+		return os.Stdout
+	}
+
+	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+		log.Printf("创建日志目录失败: %v, 使用标准输出", err)
+		return os.Stdout
+	}
+
+	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Printf("打开日志文件失败: %v, 使用标准输出", err)
+		return os.Stdout
+	}
+
+	return file
 }
 
 // Debug 输出调试日志
