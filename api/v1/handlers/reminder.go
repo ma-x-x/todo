@@ -92,8 +92,14 @@ func ListReminders(reminderService service.ReminderService) gin.HandlerFunc {
 			return
 		}
 
+		// 转换为响应格式
+		reminderResponses := make([]*reminder.ReminderResponse, len(reminders))
+		for i, r := range reminders {
+			reminderResponses[i] = reminder.ConvertToResponse(r)
+		}
+
 		c.JSON(http.StatusOK, response.Success(reminder.ListResponse{
-			Items: reminders,
+			Items: reminderResponses,
 			Total: int64(len(reminders)),
 		}))
 	}
