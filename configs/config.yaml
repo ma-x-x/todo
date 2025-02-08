@@ -15,6 +15,7 @@ mysql:
   max_idle_conns: 10
   max_open_conns: 100
   conn_max_lifetime: 3600s # 使用时间单位后缀
+  slaves: [] # 从库列表，例如: ["user:pass@tcp(slave1:3306)/db", "user:pass@tcp(slave2:3306)/db"]
 
 # Redis缓存配置
 redis:

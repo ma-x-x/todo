@@ -1,34 +1,47 @@
-// Package repository 实现数据访问层，负责与数据库交互的所有操作
 package repository
 
 import (
+	"todo/internal/repository/impl"
+	"todo/internal/repository/interfaces"
+
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
-// NewUserRepository 创建用户仓储实例
-// db: 数据库连接实例
-// 返回: UserRepository 接口实现
-func NewUserRepository(db *gorm.DB) UserRepository {
-	return &userRepo{db: db}
+// NewRepositories 创建仓储集合实例
+func NewRepositories(db *gorm.DB, rdb *redis.Client) *interfaces.Repositories {
+	opts := &interfaces.Options{
+		DB:  db,
+		RDB: rdb,
+	}
+
+	return &interfaces.Repositories{
+		User:     impl.NewUserRepository(opts.DB),
+		Auth:     impl.NewAuthRepository(opts.DB, opts.RDB),
+		Todo:     impl.NewTodoRepository(opts.DB),
+		Category: impl.NewCategoryRepository(opts.DB),
+		Reminder: impl.NewReminderRepository(opts.DB),
+	}
 }
 
-// NewTodoRepository 创建待办事项仓储实例
-// db: 数据库连接实例
-// 返回: TodoRepository 接口实现
-func NewTodoRepository(db *gorm.DB) TodoRepository {
-	return &todoRepo{db: db}
-}
+// WithTx 在事务中执行函数
+func WithTx(db *gorm.DB, fn func(*gorm.DB) error) error {
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
 
-// NewCategoryRepository 创建分类仓储实例
-// db: 数据库连接实例
-// 返回: CategoryRepository 接口实现
-func NewCategoryRepository(db *gorm.DB) CategoryRepository {
-	return &categoryRepo{db: db}
-}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r) // re-throw panic after Rollback
+		}
+	}()
 
-// NewReminderRepository 创建提醒事项仓储实例
-// db: 数据库连接实例
-// 返回: ReminderRepository 接口实现
-func NewReminderRepository(db *gorm.DB) ReminderRepository {
-	return &reminderRepo{db: db}
+	if err := fn(tx); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
 }

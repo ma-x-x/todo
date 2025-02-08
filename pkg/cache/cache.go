@@ -14,7 +14,7 @@ var (
 	once sync.Once
 )
 
-// InitRedis initializes the Redis client with the given configuration
+// InitRedis 初始化Redis客户端
 func InitRedis(cfg *config.RedisConfig) (*redis.Client, error) {
 	var initErr error
 	once.Do(func() {
@@ -40,12 +40,12 @@ func InitRedis(cfg *config.RedisConfig) (*redis.Client, error) {
 	return rdb, nil
 }
 
-// GetRedis returns the global Redis client instance
+// GetRedis 获取全局Redis客户端实例
 func GetRedis() *redis.Client {
 	return rdb
 }
 
-// Close closes the Redis connection
+// Close 关闭Redis连接
 func Close() error {
 	if rdb != nil {
 		return rdb.Close()

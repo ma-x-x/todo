@@ -4,7 +4,7 @@ import (
 	"context"
 	"todo/api/v1/dto/auth"
 	"todo/internal/models"
-	"todo/internal/repository"
+	"todo/internal/repository/interfaces"
 	"todo/pkg/config"
 	"todo/pkg/errors"
 	"todo/pkg/utils"
@@ -12,14 +12,16 @@ import (
 
 // authService 实现认证服务接口
 type authService struct {
-	userRepo repository.UserRepository // 用户数据访问接口
-	jwtCfg   *config.JWTConfig         // 建议改为 jwtConfig
+	userRepo interfaces.UserRepository
+	authRepo interfaces.AuthRepository
+	jwtCfg   *config.JWTConfig // 建议改为 jwtConfig
 }
 
 // NewAuthService 创建认证服务实例
-func NewAuthService(userRepo repository.UserRepository, jwtCfg *config.JWTConfig) *authService {
+func NewAuthService(userRepo interfaces.UserRepository, authRepo interfaces.AuthRepository, jwtCfg *config.JWTConfig) *authService {
 	return &authService{
 		userRepo: userRepo,
+		authRepo: authRepo,
 		jwtCfg:   jwtCfg,
 	}
 }
@@ -75,9 +77,14 @@ func (s *authService) Login(ctx context.Context, req *auth.LoginRequest) (string
 		ID:        user.ID,
 		Username:  user.Username,
 		Email:     user.Email,
-		CreatedAt: user.CreatedAt.Format("2006-01-02 15:04:05"),  // 格式化时间
-		UpdatedAt: user.UpdatedAt.Format("2006-01-02 15:04:05"),  // 格式化时间
+		CreatedAt: user.CreatedAt.Format("2006-01-02 15:04:05"), // 格式化时间
+		UpdatedAt: user.UpdatedAt.Format("2006-01-02 15:04:05"), // 格式化时间
 	}
 
 	return token, userInfo, nil
+}
+
+// Logout 实现用户登出
+func (s *authService) Logout(ctx context.Context, userID uint) error {
+	return s.authRepo.DeleteToken(ctx, userID)
 }

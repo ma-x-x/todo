@@ -7,19 +7,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
+	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 )
 
 // MySQLConfig MySQL数据库配置
 type MySQLConfig struct {
-	Host            string        `mapstructure:"host"`             // 数据库主机地址
-	Port            int           `mapstructure:"port"`             // 数据库端口
-	Username        string        `mapstructure:"username"`         // 数据库用户名
-	Password        string        `mapstructure:"password"`         // 数据库密码
-	Database        string        `mapstructure:"database"`         // 数据库名称
-	MaxIdleConns    int           `mapstructure:"max_idle_conns"`   // 最大空闲连接数
-	MaxOpenConns    int           `mapstructure:"max_open_conns"`   // 最大打开连接数
+	Host            string        `mapstructure:"host"`              // 数据库主机地址
+	Port            int           `mapstructure:"port"`              // 数据库端口
+	Username        string        `mapstructure:"username"`          // 数据库用户名
+	Password        string        `mapstructure:"password"`          // 数据库密码
+	Database        string        `mapstructure:"database"`          // 数据库名称
+	MaxIdleConns    int           `mapstructure:"max_idle_conns"`    // 最大空闲连接数
+	MaxOpenConns    int           `mapstructure:"max_open_conns"`    // 最大打开连接数
 	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"` // 连接最大生命周期
+	Slaves          []string      `mapstructure:"slaves"`            // 新增：从库配置
 }
 
 // ServerConfig 服务器配置
@@ -28,6 +31,7 @@ type ServerConfig struct {
 	Port         int    `mapstructure:"port"`          // 服务器端口
 	ReadTimeout  int    `mapstructure:"read_timeout"`  // 读取超时时间（秒）
 	WriteTimeout int    `mapstructure:"write_timeout"` // 写入超时时间（秒）
+	IdleTimeout  int    `mapstructure:"idle_timeout"`  // 空闲超时时间（秒）
 }
 
 // RedisConfig Redis配置
@@ -52,6 +56,12 @@ type JWTConfig struct {
 	Issuer      string `mapstructure:"issuer"`       // JWT签发者
 }
 
+// RateLimitConfig 限流配置
+type RateLimitConfig struct {
+	RequestsPerSecond int `mapstructure:"requests_per_second"`
+	Burst             int `mapstructure:"burst"`
+}
+
 // Config 应用配置
 // 配置加载优先级（从高到低）：
 // 1. 环境变量（例如：DB_HOST, REDIS_PORT）
@@ -59,29 +69,20 @@ type JWTConfig struct {
 // 3. 默认配置文件（基于 APP_ENV 环境变量，如 config.prod.yaml）
 // 4. 代码中的默认值
 type Config struct {
-	Server    ServerConfig `mapstructure:"server"`
-	MySQL     MySQLConfig  `mapstructure:"mysql"`
-	Redis     RedisConfig  `mapstructure:"redis"`
-	Logger    LoggerConfig `mapstructure:"logger"`
-	JWT       JWTConfig    `mapstructure:"jwt"`
-	RateLimit struct {
-		RequestsPerSecond float64 `mapstructure:"requests_per_second"` // 每秒请求限制
-		Burst             int     `mapstructure:"burst"`               // 突发请求限制
-	} `mapstructure:"rate_limit"`
+	Server    ServerConfig    `mapstructure:"server" validate:"required"`
+	MySQL     MySQLConfig     `mapstructure:"mysql" validate:"required"`
+	Redis     RedisConfig     `mapstructure:"redis"`
+	Logger    LoggerConfig    `mapstructure:"logger"`
+	JWT       JWTConfig       `mapstructure:"jwt"`
+	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
 	TaskQueue struct {
 		BufferSize int `mapstructure:"buffer_size"` // 任务队列缓冲大小
 		Workers    int `mapstructure:"workers"`     // 工作协程数量
 	} `mapstructure:"task_queue"`
 }
 
-// LoadConfig 加载配置文件
-// 配置加载流程：
-// 1. 设置配置文件路径
-// 2. 设置默认值和环境变量绑定
-// 3. 设置并读取配置文件
-// 4. 解析配置到结构体
-// 5. 验证必要的配置
-func LoadConfig() (*Config, error) {
+// LoadConfig 改名为 Load
+func Load() (*Config, error) {
 	// 设置配置文件路径
 	configFile := os.Getenv("CONFIG_FILE")
 	if configFile == "" {
@@ -109,7 +110,7 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("配置验证失败: %w", err)
 	}
 
-	log.Printf("配置加载成功 [模式:%s] [端口:%d] [日志级别:%s]", 
+	log.Printf("配置加载成功 [模式:%s] [端口:%d] [日志级别:%s]",
 		cfg.Server.Mode, cfg.Server.Port, cfg.Logger.Level)
 
 	return &cfg, nil
@@ -122,6 +123,7 @@ func setDefaults() {
 	viper.SetDefault("server.port", 8080)
 	viper.SetDefault("server.read_timeout", 10)
 	viper.SetDefault("server.write_timeout", 10)
+	viper.SetDefault("server.idle_timeout", 120)
 
 	viper.SetDefault("mysql.max_idle_conns", 10)
 	viper.SetDefault("mysql.max_open_conns", 100)
@@ -151,7 +153,7 @@ func setDefaults() {
 // - LOG_LEVEL: logger.level
 func processEnvVars() {
 	fmt.Println("========== 开始处理环境变量 ==========")
-	
+
 	// 数据库配置
 	if host := os.Getenv("DB_HOST"); host != "" {
 		fmt.Printf("从环境变量读取 DB_HOST: %s\n", host)
@@ -159,28 +161,28 @@ func processEnvVars() {
 	} else {
 		fmt.Println("未找到环境变量 DB_HOST")
 	}
-	
+
 	if port := os.Getenv("DB_PORT"); port != "" {
 		fmt.Printf("从环境变量读取 DB_PORT: %s\n", port)
 		viper.Set("mysql.port", port)
 	} else {
 		fmt.Println("未找到环境变量 DB_PORT")
 	}
-	
+
 	if user := os.Getenv("DB_USER"); user != "" {
 		fmt.Printf("从环境变量读取 DB_USER: %s\n", user)
 		viper.Set("mysql.username", user)
 	} else {
 		fmt.Println("未找到环境变量 DB_USER")
 	}
-	
+
 	if pass := os.Getenv("DB_PASSWORD"); pass != "" {
 		fmt.Println("从环境变量读取 DB_PASSWORD: ******")
 		viper.Set("mysql.password", pass)
 	} else {
 		fmt.Println("未找到环境变量 DB_PASSWORD")
 	}
-	
+
 	if name := os.Getenv("DB_NAME"); name != "" {
 		fmt.Printf("从环境变量读取 DB_NAME: %s\n", name)
 		viper.Set("mysql.database", name)
@@ -195,14 +197,14 @@ func processEnvVars() {
 	} else {
 		fmt.Println("未找到环境变量 REDIS_HOST")
 	}
-	
+
 	if port := os.Getenv("REDIS_PORT"); port != "" {
 		fmt.Printf("从环境变量读取 REDIS_PORT: %s\n", port)
 		viper.Set("redis.port", port)
 	} else {
 		fmt.Println("未找到环境变量 REDIS_PORT")
 	}
-	
+
 	if pass := os.Getenv("REDIS_PASSWORD"); pass != "" {
 		fmt.Println("从环境变量读取 REDIS_PASSWORD: ******")
 		viper.Set("redis.password", pass)
@@ -264,16 +266,16 @@ func validateConfig(cfg *Config) error {
 
 	// 验证数据库配置
 	if cfg.MySQL.Host == "" {
-		cfg.MySQL.Host = "mysql"  // 默认值
+		cfg.MySQL.Host = "mysql" // 默认值
 	}
 	if cfg.MySQL.Port == 0 {
-		cfg.MySQL.Port = 3306  // 默认值
+		cfg.MySQL.Port = 3306 // 默认值
 	}
 	if cfg.MySQL.Username == "" {
-		cfg.MySQL.Username = "todo_user"  // 默认值
+		cfg.MySQL.Username = "todo_user" // 默认值
 	}
 	if cfg.MySQL.Database == "" {
-		cfg.MySQL.Database = "todo_db"  // 默认值
+		cfg.MySQL.Database = "todo_db" // 默认值
 	}
 
 	// 验证服务器模式
@@ -283,4 +285,18 @@ func validateConfig(cfg *Config) error {
 	}
 
 	return nil
+}
+
+// Validate 使用结构化的配置验证
+func (c *Config) Validate() error {
+	validate := validator.New()
+	return validate.Struct(c)
+}
+
+// WatchConfig 添加配置热重载支持
+func WatchConfig(cfg *Config, callback func(cfg *Config)) {
+	viper.WatchConfig()
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		// 重新加载配置
+	})
 }

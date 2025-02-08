@@ -10,74 +10,110 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Register 用户注册处理器
-// @Summary 用户注册
-// @Description 创建新用户账号，验证注册信息并在成功时返回确认消息
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body auth.RegisterRequest true "注册信息，包含用户名和密码"
-// @Success 200 {object} response.Response{data=auth.RegisterResponse} "注册成功返回信息"
-// @Failure 400 {object} response.Response "请求参数错误"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /auth/register [post]
-func Register(authService service.AuthService) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var req auth.RegisterRequest
+// AuthHandler 认证处理器
+type AuthHandler struct {
+	authService service.AuthService
+}
 
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, err.Error()))
-			return
-		}
-
-		if err := authService.Register(c.Request.Context(), &req); err != nil {
-			if err == errors.ErrUserExists {
-				c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, "用户名已存在"))
-				return
-			}
-			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, "注册失败"))
-			return
-		}
-
-		c.JSON(http.StatusOK, response.Success(auth.RegisterResponse{
-			Message: "注册成功",
-		}))
+// NewAuthHandler 创建认证处理器实例
+func NewAuthHandler(authService service.AuthService) *AuthHandler {
+	return &AuthHandler{
+		authService: authService,
 	}
 }
 
-// Login 用户登录处理器
-// @Summary 用户登录
-// @Description 验证用户凭证并生成JWT令牌，返回令牌和用户信息
-// @Tags auth
+// Register 用户注册
+// @Summary 用户注册
+// @Description 创建新用户账号
+// @Tags 认证管理
 // @Accept json
 // @Produce json
-// @Param request body auth.LoginRequest true "登录信息，包含用户名和密码"
-// @Success 200 {object} response.Response{data=auth.LoginResponse} "登录成功返回的JWT令牌和用户信息"
-// @Failure 401 {object} response.Response "用户名或密码错误等认证失败的情况"
+// @Param request body auth.RegisterRequest true "注册信息"
+// @Success 200 {object} response.Response{data=auth.RegisterResponse} "注册成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /auth/register [post]
+func (h *AuthHandler) Register(c *gin.Context) {
+	var req auth.RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// 调用服务层处理注册逻辑
+	err := h.authService.Register(c.Request.Context(), &req)
+	if err == errors.ErrUserExists {
+		response.Error(c, http.StatusBadRequest, "用户名已存在")
+		return
+	} else if err != nil {
+		response.Error(c, http.StatusInternalServerError, "注册失败")
+		return
+	}
+
+	response.Success(c, auth.RegisterResponse{
+		Message: "注册成功",
+	})
+}
+
+// Login 用户登录
+// @Summary 用户登录
+// @Description 用户登录并获取JWT令牌
+// @Tags 认证管理
+// @Accept json
+// @Produce json
+// @Param request body auth.LoginRequest true "登录信息"
+// @Success 200 {object} response.Response{data=gin.H{token=string,user=auth.UserInfo}} "登录成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "用户名或密码错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /auth/login [post]
-func Login(authService service.AuthService) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var req auth.LoginRequest
-
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, response.Error(http.StatusBadRequest, err.Error()))
-			return
-		}
-
-		token, userInfo, err := authService.Login(c.Request.Context(), &req)
-		if err != nil {
-			if err == errors.ErrInvalidCredentials {
-				c.JSON(http.StatusUnauthorized, response.Error(http.StatusUnauthorized, "用户名或密码错误"))
-				return
-			}
-			c.JSON(http.StatusInternalServerError, response.Error(http.StatusInternalServerError, "登录失败"))
-			return
-		}
-
-		c.JSON(http.StatusOK, response.Success(auth.LoginResponse{
-			Token: token,
-			User:  userInfo,
-		}))
+func (h *AuthHandler) Login(c *gin.Context) {
+	var req auth.LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
 	}
+
+	// 调用服务层处理登录逻辑
+	token, userInfo, err := h.authService.Login(c.Request.Context(), &req)
+	if err == errors.ErrInvalidCredentials {
+		response.Error(c, http.StatusUnauthorized, "用户名或密码错误")
+		return
+	} else if err != nil {
+		response.Error(c, http.StatusInternalServerError, "登录失败")
+		return
+	}
+
+	response.Success(c, gin.H{
+		"token": token,
+		"user":  userInfo,
+	})
+}
+
+// Logout 用户登出
+// @Summary 用户登出
+// @Description 注销用户登录状态
+// @Tags 认证管理
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer JWT令牌"
+// @Success 200 {object} response.Response "登出成功"
+// @Failure 401 {object} response.Response "未授权访问"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /auth/logout [post]
+func (h *AuthHandler) Logout(c *gin.Context) {
+	// 获取用户ID
+	userID := c.GetUint("userID")
+	if userID == 0 {
+		response.Error(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+
+	// 调用服务层处理登出逻辑
+	if err := h.authService.Logout(c.Request.Context(), userID); err != nil {
+		response.Error(c, http.StatusInternalServerError, "登出失败")
+		return
+	}
+
+	response.Success(c, nil)
 }

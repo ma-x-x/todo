@@ -5,16 +5,36 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"todo/pkg/config"
 	"time"
 
+	"todo/pkg/config"
+
+	"github.com/natefinch/lumberjack"
 	"github.com/rs/zerolog"
 )
 
 var log zerolog.Logger
 
+// LogContext 日志上下文
+type LogContext struct {
+	TraceID    string
+	RequestID  string
+	UserID     uint
+	Additional map[string]interface{}
+}
+
+// TimezoneHook 时区钩子
+type TimezoneHook struct{}
+
+func (h TimezoneHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
+	e.Time("timestamp", time.Now())
+}
+
 // Init 初始化日志
 func Init(cfg config.LoggerConfig) error {
+	// 配置日志轮转
+	output := configureOutput(cfg.File)
+
 	// 设置日志级别
 	level, err := zerolog.ParseLevel(cfg.Level)
 	if err != nil {
@@ -22,27 +42,27 @@ func Init(cfg config.LoggerConfig) error {
 	}
 	zerolog.SetGlobalLevel(level)
 
-	// 配置输出
-	output := configureOutput(cfg.File)
-
 	// 设置日志格式
+	configureLogFormat()
+
+	// 初始化日志对象
+	log = zerolog.New(output).With().Timestamp().Logger().Hook(TimezoneHook{})
+	return nil
+}
+
+// configureLogFormat 配置日志格式
+func configureLogFormat() {
 	zerolog.TimestampFieldName = "timestamp"
 	zerolog.LevelFieldName = "level"
 	zerolog.MessageFieldName = "message"
 	zerolog.ErrorFieldName = "error"
 	zerolog.TimeFieldFormat = time.RFC3339
 
-	// 自定义日志级别显示
-	zerolog.LevelDebugValue = "调试"
-	zerolog.LevelInfoValue = "信息"
-	zerolog.LevelWarnValue = "警告"
-	zerolog.LevelErrorValue = "错误"
-	zerolog.LevelFatalValue = "致命"
-
-	// 初始化日志对象
-	log = zerolog.New(output).With().Timestamp().Logger().Hook(TimezoneHook{})
-
-	return nil
+	zerolog.LevelDebugValue = "debug"
+	zerolog.LevelInfoValue = "info"
+	zerolog.LevelWarnValue = "warn"
+	zerolog.LevelErrorValue = "error"
+	zerolog.LevelFatalValue = "fatal"
 }
 
 func configureOutput(filePath string) io.Writer {
@@ -51,84 +71,165 @@ func configureOutput(filePath string) io.Writer {
 	}
 
 	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
-		log.Printf("创建日志目录失败: %v, 使用标准输出", err)
+		fmt.Printf("Failed to create log directory: %v, using stdout\n", err)
 		return os.Stdout
 	}
 
-	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
-	if err != nil {
-		log.Printf("打开日志文件失败: %v, 使用标准输出", err)
-		return os.Stdout
+	logWriter := &lumberjack.Logger{
+		Filename:   filePath,
+		MaxSize:    100, // MB
+		MaxBackups: 3,
+		MaxAge:     28, // days
+		Compress:   true,
 	}
 
-	return file
+	return zerolog.MultiLevelWriter(os.Stdout, logWriter)
 }
 
-// Debug 输出调试日志
-func Debug() *zerolog.Event {
-	return log.Debug()
+// 基础日志方法
+func Debug() *zerolog.Event { return log.Debug() }
+func Info() *zerolog.Event  { return log.Info() }
+func Warn() *zerolog.Event  { return log.Warn() }
+func Error() *zerolog.Event { return log.Error() }
+func Fatal() *zerolog.Event { return log.Fatal() }
+
+// WithContext 创建带上下文的日志事件
+func WithContext(ctx LogContext) zerolog.Logger {
+	contextLogger := log.With().
+		Str("trace_id", ctx.TraceID).
+		Uint("user_id", ctx.UserID).
+		Time("timestamp", time.Now())
+
+	if ctx.RequestID != "" {
+		contextLogger = contextLogger.Str("request_id", ctx.RequestID)
+	}
+
+	for k, v := range ctx.Additional {
+		contextLogger = contextLogger.Interface(k, v)
+	}
+
+	return contextLogger.Logger()
 }
 
-// Info 输出信息日志
-func Info() *zerolog.Event {
-	return log.Info()
+// LogOperation 日志操作结构
+type LogOperation struct {
+	TraceID    string
+	Operation  string
+	Duration   time.Duration
+	Error      error
+	Additional map[string]interface{}
 }
 
-// Warn 输出警告日志
-func Warn() *zerolog.Event {
-	return log.Warn()
+// LogHTTPRequest 记录HTTP请求
+func LogHTTPRequest(op LogOperation, method, path string, status int) {
+	event := Info().
+		Str("trace_id", op.TraceID).
+		Str("method", method).
+		Str("path", path).
+		Int("status", status).
+		Dur("duration", op.Duration)
+
+	if op.Error != nil {
+		event.Err(op.Error)
+	}
+
+	for k, v := range op.Additional {
+		event.Interface(k, v)
+	}
+
+	event.Msg("HTTP Request")
 }
 
-// Error 输出错误日志
-func Error() *zerolog.Event {
-	return log.Error()
-}
+// LogDBOperation 记录数据库操作
+func LogDBOperation(op LogOperation, table string) {
+	event := Debug().
+		Str("trace_id", op.TraceID).
+		Str("operation", op.Operation).
+		Str("table", table).
+		Dur("duration", op.Duration)
 
-// Fatal 输出致命错误日志
-func Fatal() *zerolog.Event {
-	return log.Fatal()
-}
-
-// LogRequest 记录HTTP请求日志
-func LogRequest(traceID string, method string, path string, status int, latency time.Duration) {
-	log.Info().
-		Str("追踪ID", traceID).
-		Str("请求方法", method).
-		Str("请求路径", path).
-		Int("状态码", status).
-		Dur("响应时间", latency).
-		Msg("HTTP请求")
-}
-
-// 添加一些常用的日志方法
-func LogDBOperation(operation string, table string, err error) {
-	if err != nil {
-		log.Error().
-			Str("操作", operation).
-			Str("数据表", table).
-			Err(err).
-			Msg("数据库操作失败")
+	if op.Error != nil {
+		event.Err(op.Error).Msg("Database operation failed")
 	} else {
-		log.Debug().
-			Str("操作", operation).
-			Str("数据表", table).
-			Msg("数据库操作成功")
+		event.Msg("Database operation succeeded")
 	}
 }
 
-func LogCacheOperation(operation string, key string, err error) {
-	if err != nil {
-		log.Error().
-			Str("操作", operation).
-			Str("键", key).
-			Err(err).
-			Msg("缓存操作失败")
-	} else {
-		log.Debug().
-			Str("操作", operation).
-			Str("键", key).
-			Msg("缓存操作成功")
+// LogCacheOperation 记录缓存操作
+func LogCacheOperation(op LogOperation, key string) {
+	event := Debug().
+		Str("trace_id", op.TraceID).
+		Str("operation", op.Operation).
+		Str("key", key).
+		Dur("duration", op.Duration)
+
+	if op.Error != nil {
+		event.Err(op.Error)
 	}
+
+	event.Msg("Cache Operation")
+}
+
+// LogInfo 记录信息日志
+func LogInfo(traceID string, message string, fields map[string]interface{}) {
+	event := log.Info().
+		Str("trace_id", traceID)
+
+	for k, v := range fields {
+		event = event.Interface(k, v)
+	}
+
+	event.Msg(message)
+}
+
+// LogError 记录错误日志
+func LogError(traceID string, err error, message string, fields map[string]interface{}) {
+	event := log.Error().
+		Str("trace_id", traceID)
+
+	if err != nil {
+		event = event.Err(err)
+	}
+
+	for k, v := range fields {
+		event = event.Interface(k, v)
+	}
+
+	event.Msg(message)
+}
+
+// LogDebug 记录调试日志
+func LogDebug(traceID string, msg string, fields map[string]interface{}) {
+	event := log.Debug().
+		Str("trace_id", traceID)
+
+	for k, v := range fields {
+		event = event.Interface(k, v)
+	}
+
+	event.Msg(msg)
+}
+
+// LogWarn 记录警告日志
+func LogWarn(traceID string, msg string, fields map[string]interface{}) {
+	event := log.Warn().
+		Str("trace_id", traceID)
+
+	for k, v := range fields {
+		event = event.Interface(k, v)
+	}
+
+	event.Msg(msg)
+}
+
+// LogDBQuery 记录数据库查询日志
+func LogDBQuery(traceID string, query string, args []interface{}, duration time.Duration) {
+	log.Debug().
+		Str("trace_id", traceID).
+		Str("query", query).
+		Interface("args", args).
+		Dur("duration", duration).
+		Msg("Database Query")
 }
 
 func LogUserAction(userID string, action string, details string) {
@@ -146,9 +247,44 @@ func LogSystemEvent(event string, details string) {
 		Msg("系统事件")
 }
 
-// TimezoneHook 用于确保时间戳使用正确的时区
-type TimezoneHook struct{}
+// 1. 添加结构化日志字段
+type LogField struct {
+	Key   string
+	Value interface{}
+}
 
-func (h TimezoneHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
-	e.Time("时间", time.Now().In(time.Local))
+// 2. 支持日志轮转
+func InitLogger(cfg config.LoggerConfig) error {
+	// 配置日志轮转
+	lumberjackLogger := &lumberjack.Logger{
+		Filename:   cfg.File,
+		MaxSize:    100, // MB
+		MaxBackups: 10,
+		MaxAge:     30, // days
+		Compress:   true,
+	}
+
+	// 多输出支持
+	var output io.Writer
+	if cfg.File != "" {
+		output = zerolog.MultiLevelWriter(os.Stdout, lumberjackLogger)
+	} else {
+		output = os.Stdout
+	}
+
+	// 设置日志级别
+	level, err := zerolog.ParseLevel(cfg.Level)
+	if err != nil {
+		return fmt.Errorf("无效的日志级别: %w", err)
+	}
+	zerolog.SetGlobalLevel(level)
+
+	// 初始化日志对象
+	log = zerolog.New(output).
+		With().
+		Timestamp().
+		Logger().
+		Hook(TimezoneHook{})
+
+	return nil
 }

@@ -2,28 +2,29 @@ package impl
 
 import (
 	"context"
+	"time"
 	"todo/api/v1/dto/todo"
 	"todo/internal/models"
-	"todo/internal/repository"
+	"todo/internal/repository/interfaces"
 	"todo/pkg/errors"
 )
 
 // TodoService 待办事项服务结构体
 // 负责处理所有与待办事项相关的业务逻辑
 type TodoService struct {
-	todoRepo repository.TodoRepository // 待办事项数据仓库接口
+	todoRepo interfaces.TodoRepository
 }
 
 // NewTodoService 创建一个新的待办事项服务实例
 //
 // Parameters:
-//   - todoRepo: 待办事项仓库实现
+//   - repo: 待办事项仓库实现
 //
 // Returns:
 //   - *TodoService: 返回待办事项服务实例
-func NewTodoService(todoRepo repository.TodoRepository) *TodoService {
+func NewTodoService(repo interfaces.TodoRepository) *TodoService {
 	return &TodoService{
-		todoRepo: todoRepo,
+		todoRepo: repo,
 	}
 }
 
@@ -60,11 +61,7 @@ func (s *TodoService) Create(ctx context.Context, userID uint, req *todo.CreateR
 
 // List 获取用户的所有待办事项
 func (s *TodoService) List(ctx context.Context, userID uint) ([]*models.Todo, error) {
-	// 默认分页参数
-	page := 1
-	pageSize := 100
-	todos, _, err := s.todoRepo.ListByUserID(ctx, userID, page, pageSize)
-	return todos, err
+	return s.todoRepo.ListByUserID(ctx, userID)
 }
 
 // Get 获取单个待办事项详情
@@ -73,36 +70,56 @@ func (s *TodoService) Get(ctx context.Context, id, userID uint) (*models.Todo, e
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 验证所有权
 	if todo.UserID != userID {
 		return nil, errors.ErrForbidden
 	}
-	
+
 	return todo, nil
 }
 
 // Update 更新待办事项
 func (s *TodoService) Update(ctx context.Context, id, userID uint, req *todo.UpdateRequest) error {
-	todoItem, err := s.Get(ctx, id, userID)
+	todoItem, err := s.todoRepo.GetByIDAndUserID(ctx, id, userID)
 	if err != nil {
 		return err
 	}
 
-	if req.Title != nil {
-		todoItem.Title = *req.Title
+	if req.Title != "" {
+		todoItem.Title = req.Title
 	}
-	if req.Description != nil {
-		todoItem.Description = *req.Description
+
+	if req.Description != "" {
+		todoItem.Description = req.Description
 	}
-	if req.Completed != nil {
-		todoItem.Completed = *req.Completed
+
+	if req.Status != "" {
+		status, err := models.ParseTodoStatus(req.Status)
+		if err != nil {
+			return err
+		}
+		todoItem.Status = status
 	}
-	if req.Priority != nil {
-		todoItem.Priority = models.Priority(*req.Priority)
+
+	if req.Priority != "" {
+		todoItem.Priority = models.Priority(req.Priority)
 	}
+
+	if req.DueDate != "" {
+		dueDate, err := time.Parse("2006-01-02T15:04:05Z07:00", req.DueDate)
+		if err != nil {
+			return errors.New("无效的截止时间格式")
+		}
+		todoItem.DueDate = dueDate
+	}
+
 	if req.CategoryID != nil {
 		todoItem.CategoryID = req.CategoryID
+	}
+
+	if req.Completed != nil {
+		todoItem.Completed = *req.Completed
 	}
 
 	return s.todoRepo.Update(ctx, todoItem)
@@ -121,7 +138,7 @@ func (s *TodoService) Delete(ctx context.Context, id, userID uint) error {
 // GetTodoRepo 获取待办事项仓库实例
 //
 // Returns:
-//   - repository.TodoRepository: 返回待办事项仓库接口
-func (s *TodoService) GetTodoRepo() repository.TodoRepository {
+//   - interfaces.TodoRepository: 返回待办事项仓库接口
+func (s *TodoService) GetTodoRepo() interfaces.TodoRepository {
 	return s.todoRepo
 }

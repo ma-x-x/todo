@@ -4,13 +4,12 @@ import (
 	"context"
 	"todo/api/v1/dto/category"
 	"todo/internal/models"
-	"todo/internal/repository"
-	"todo/pkg/errors"
+	"todo/internal/repository/interfaces"
 )
 
 // CategoryService 分类服务实现
 type CategoryService struct {
-	categoryRepo repository.CategoryRepository
+	categoryRepo interfaces.CategoryRepository
 }
 
 // NewCategoryService 创建一个新的分类服务实例
@@ -20,7 +19,7 @@ type CategoryService struct {
 //
 // Returns:
 //   - *CategoryService: 返回分类服务实例
-func NewCategoryService(repo repository.CategoryRepository) *CategoryService {
+func NewCategoryService(repo interfaces.CategoryRepository) *CategoryService {
 	return &CategoryService{categoryRepo: repo}
 }
 
@@ -36,9 +35,10 @@ func NewCategoryService(repo repository.CategoryRepository) *CategoryService {
 //   - error: 可能的错误信息
 func (s *CategoryService) Create(ctx context.Context, userID uint, req *category.CreateRequest) (uint, error) {
 	category := &models.Category{
-		Name:   req.Name,  // 分类名称
-		Color:  req.Color, // 分类颜色
-		UserID: userID,    // 所属用户ID
+		Name:        req.Name,
+		Description: req.Description,
+		Color:       req.Color,
+		UserID:      userID,
 	}
 
 	if err := s.categoryRepo.Create(ctx, category); err != nil {
@@ -59,17 +59,7 @@ func (s *CategoryService) Create(ctx context.Context, userID uint, req *category
 //   - *models.Category: 返回分类信息
 //   - error: 可能的错误信息
 func (s *CategoryService) Get(ctx context.Context, id, userID uint) (*models.Category, error) {
-	category, err := s.categoryRepo.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	// 验证分类是否属于当前用户
-	if category.UserID != userID {
-		return nil, errors.ErrForbidden
-	}
-
-	return category, nil
+	return s.categoryRepo.GetByIDAndUserID(ctx, id, userID)
 }
 
 // List 获取用户的所有分类列表
@@ -95,18 +85,22 @@ func (s *CategoryService) List(ctx context.Context, userID uint) ([]*models.Cate
 //
 // Returns:
 //   - error: 可能的错误信息
-func (s *CategoryService) Update(ctx context.Context, userID, categoryID uint, req *category.UpdateRequest) error {
-	category, err := s.Get(ctx, categoryID, userID)
+func (s *CategoryService) Update(ctx context.Context, userID, id uint, req *category.UpdateRequest) error {
+	// 先获取分类
+	category, err := s.categoryRepo.GetByIDAndUserID(ctx, id, userID)
 	if err != nil {
 		return err
 	}
 
-	// 只更新提供的字段
-	if req.Name != nil {
-		category.Name = *req.Name
+	// 更新非空字段
+	if req.Name != "" {
+		category.Name = req.Name
 	}
-	if req.Color != nil {
-		category.Color = *req.Color
+	if req.Description != "" {
+		category.Description = req.Description
+	}
+	if req.Color != "" {
+		category.Color = req.Color
 	}
 
 	return s.categoryRepo.Update(ctx, category)
@@ -121,11 +115,27 @@ func (s *CategoryService) Update(ctx context.Context, userID, categoryID uint, r
 //
 // Returns:
 //   - error: 可能的错误信息
-func (s *CategoryService) Delete(ctx context.Context, userID, categoryID uint) error {
-	category, err := s.Get(ctx, categoryID, userID)
-	if err != nil {
+func (s *CategoryService) Delete(ctx context.Context, userID, id uint) error {
+	// 先检查分类是否存在且属于该用户
+	if _, err := s.categoryRepo.GetByIDAndUserID(ctx, id, userID); err != nil {
 		return err
 	}
 
-	return s.categoryRepo.Delete(ctx, category.ID)
+	return s.categoryRepo.Delete(ctx, id)
+}
+
+// CreateCategory 创建新的分类
+func (s *CategoryService) CreateCategory(ctx context.Context, req *category.CreateRequest, userID uint) (*models.Category, error) {
+	category := &models.Category{
+		Name:        req.Name,
+		Description: req.Description,
+		Color:       req.Color,
+		UserID:      userID,
+	}
+
+	if err := s.categoryRepo.Create(ctx, category); err != nil {
+		return nil, err
+	}
+
+	return category, nil
 }
