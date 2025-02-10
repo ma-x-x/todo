@@ -207,12 +207,16 @@ docker-compose up -d --force-recreate app
 
 # 等待应用就绪
 echo "等待应用就绪..."
-for i in {1..30}; do
+for i in {1..60}; do
     if curl -s http://localhost:8081/health > /dev/null; then
         echo "应用已就绪！"
         break
     fi
-    echo "等待应用就绪中... ($i/30)"
+    if [ $i -eq 60 ]; then
+        echo "应用未能在指定时间内就绪，但将继续执行..."
+        break
+    fi
+    echo "等待应用就绪中... ($i/60)"
     sleep 2
 done
 
