@@ -52,6 +52,15 @@ func (s *TodoService) Create(ctx context.Context, userID uint, req *todo.CreateR
 		todoItem.Priority = models.PriorityMedium // 默认中优先级
 	}
 
+	// 只在提供了截止时间时设置
+	if req.DueDate != "" {
+		dueDate, err := time.Parse("2006-01-02T15:04:05Z07:00", req.DueDate)
+		if err != nil {
+			return 0, errors.New("无效的截止时间格式")
+		}
+		todoItem.DueDate = &dueDate // 使用指针
+	}
+
 	if err := s.todoRepo.Create(ctx, todoItem); err != nil {
 		return 0, err
 	}
@@ -111,7 +120,7 @@ func (s *TodoService) Update(ctx context.Context, id, userID uint, req *todo.Upd
 		if err != nil {
 			return errors.New("无效的截止时间格式")
 		}
-		todoItem.DueDate = dueDate
+		todoItem.DueDate = &dueDate // 修改这里，使用指针
 	}
 
 	if req.CategoryID != nil {

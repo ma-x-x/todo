@@ -3,7 +3,7 @@ package middleware
 import (
 	"strings"
 	"todo/pkg/config"
-	"todo/pkg/utils"
+	"todo/pkg/jwt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -36,7 +36,7 @@ func Auth(jwtCfg *config.JWTConfig) gin.HandlerFunc {
 			return
 		}
 
-		claims, err := utils.ParseToken(token, jwtCfg)
+		claims, err := jwt.ParseToken(token, jwtCfg)
 		if err != nil {
 			c.AbortWithStatusJSON(401, gin.H{
 				"error": "无效的令牌",

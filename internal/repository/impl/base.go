@@ -3,6 +3,7 @@ package impl
 import (
 	"context"
 	"errors"
+	"reflect"
 	pkgErrors "todo/pkg/errors"
 
 	"gorm.io/gorm"
@@ -55,7 +56,20 @@ func (r *BaseRepository) Update(ctx context.Context, model interface{}) error {
 
 // Delete 通用删除方法
 func (r *BaseRepository) Delete(ctx context.Context, model interface{}) error {
-	return r.GetDB(ctx).Delete(model).Error
+	// 获取模型的主键值
+	value := reflect.ValueOf(model)
+	if value.Kind() == reflect.Ptr {
+		value = value.Elem()
+	}
+
+	// 获取主键字段
+	idField := value.FieldByName("ID")
+	if !idField.IsValid() {
+		return errors.New("模型缺少 ID 字段")
+	}
+
+	// 使用主键作为删除条件
+	return r.GetDB(ctx).Where("id = ?", idField.Interface()).Delete(model).Error
 }
 
 // GetByID 通用根据ID获取方法

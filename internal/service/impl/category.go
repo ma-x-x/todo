@@ -2,9 +2,13 @@ package impl
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"todo/api/v1/dto/category"
 	"todo/internal/models"
 	"todo/internal/repository/interfaces"
+
+	"gorm.io/gorm"
 )
 
 // CategoryService 分类服务实现
@@ -115,13 +119,21 @@ func (s *CategoryService) Update(ctx context.Context, userID, id uint, req *cate
 //
 // Returns:
 //   - error: 可能的错误信息
-func (s *CategoryService) Delete(ctx context.Context, userID, id uint) error {
+func (s *CategoryService) Delete(ctx context.Context, id, userID uint) error {
 	// 先检查分类是否存在且属于该用户
-	if _, err := s.categoryRepo.GetByIDAndUserID(ctx, id, userID); err != nil {
-		return err
+	_, err := s.categoryRepo.GetByIDAndUserID(ctx, id, userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("分类不存在或无权限访问")
+		}
+		return fmt.Errorf("查询分类失败: %w", err)
 	}
 
-	return s.categoryRepo.Delete(ctx, id)
+	if err := s.categoryRepo.Delete(ctx, id); err != nil {
+		return fmt.Errorf("删除分类失败: %w", err)
+	}
+
+	return nil
 }
 
 // CreateCategory 创建新的分类

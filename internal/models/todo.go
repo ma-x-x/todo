@@ -37,7 +37,7 @@ type Todo struct {
 	Description string     `json:"description" gorm:"size:500"`
 	Status      TodoStatus `json:"status" gorm:"size:20;not null;default:pending;index"`
 	Priority    Priority   `json:"priority" gorm:"size:20;default:medium;index"`
-	DueDate     time.Time  `json:"dueDate"`
+	DueDate     *time.Time `json:"dueDate"`
 	CategoryID  *uint      `json:"categoryId"`
 	UserID      uint       `json:"userId" gorm:"not null;index"`
 	CreatedAt   time.Time  `json:"created_at"`
@@ -58,7 +58,8 @@ func (t *Todo) Validate() error {
 		return errors.New("用户ID不能为空")
 	}
 
-	if t.DueDate.Before(time.Now()) {
+	// 只在设置了截止时间的情况下验证
+	if t.DueDate != nil && t.DueDate.Before(time.Now()) {
 		return errors.New("截止时间不能是过去时间")
 	}
 
@@ -69,11 +70,13 @@ func (t *Todo) Validate() error {
 		return errors.New("无效的优先级")
 	}
 
-	// 验证状态
-	switch t.Status {
-	case TodoStatusPending, TodoStatusProgress, TodoStatusCompleted:
-	default:
-		return errors.New("无效的状态")
+	// 只在显式设置了状态时才验证
+	if t.Status != "" {
+		switch t.Status {
+		case TodoStatusPending, TodoStatusProgress, TodoStatusCompleted:
+		default:
+			return errors.New("无效的状态")
+		}
 	}
 
 	return nil

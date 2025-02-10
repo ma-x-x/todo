@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"todo/api/v1/dto/todo"
@@ -39,7 +40,7 @@ type TodoResponse struct {
 	// 优先级
 	Priority string `json:"priority" example:"medium"`
 	// 截止时间
-	DueDate string `json:"dueDate" example:"2024-02-08T17:12:40+08:00"`
+	DueDate string `json:"dueDate,omitempty" example:"2024-02-08T17:12:40+08:00"`
 	// 分类ID
 	CategoryID *uint `json:"categoryId,omitempty" example:"1"`
 	// 完成状态
@@ -51,7 +52,7 @@ type TodoResponse struct {
 	// 分类信息
 	Category *CategoryResponse `json:"category,omitempty"`
 	// 提醒列表
-	Reminders []ReminderResponse `json:"reminders,omitempty"`
+	Reminders []ReminderResponse `json:"reminders"`
 }
 
 // Create 创建待办事项
@@ -80,10 +81,12 @@ func (h *TodoHandler) Create(c *gin.Context) {
 		userID := middleware.GetUserID(c)
 		category, err := h.categoryService.Get(c.Request.Context(), *req.CategoryID, userID)
 		if err != nil {
+			log.Printf("验证分类失败: %v", err)
 			response.BadRequest(c, "无效的分类ID")
 			return
 		}
 		if category.UserID != userID {
+			log.Printf("分类不属于当前用户: categoryID=%d, userID=%d", *req.CategoryID, userID)
 			response.Error(c, http.StatusForbidden, "分类不属于当前用户")
 			return
 		}
@@ -92,13 +95,17 @@ func (h *TodoHandler) Create(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	id, err := h.todoService.Create(c.Request.Context(), userID, &req)
 	if err != nil {
+		log.Printf("创建待办事项失败: %v", err)
 		response.Error(c, http.StatusInternalServerError, "创建待办事项失败")
 		return
 	}
 
+	log.Printf("成功创建待办事项: id=%d", id)
+
 	// 获取创建后的完整信息
 	createdTodo, err := h.todoService.Get(c.Request.Context(), id, userID)
 	if err != nil {
+		log.Printf("获取创建的待办事项失败: %v", err)
 		response.Error(c, http.StatusInternalServerError, "获取创建的待办事项失败")
 		return
 	}
@@ -110,11 +117,17 @@ func (h *TodoHandler) Create(c *gin.Context) {
 		Description: createdTodo.Description,
 		Status:      createdTodo.Status.String(),
 		Priority:    string(createdTodo.Priority),
-		DueDate:     createdTodo.DueDate.Format("2006-01-02T15:04:05Z07:00"),
 		CategoryID:  createdTodo.CategoryID,
 		Completed:   createdTodo.Completed,
 		CreatedAt:   createdTodo.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:   createdTodo.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		Reminders:   make([]ReminderResponse, 0),
+	}
+
+	// 安全处理 DueDate
+	if createdTodo.DueDate != nil {
+		formattedDueDate := createdTodo.DueDate.Format("2006-01-02T15:04:05Z07:00")
+		todoResponse.DueDate = formattedDueDate
 	}
 
 	if createdTodo.Category != nil {
@@ -153,9 +166,28 @@ func (h *TodoHandler) List(c *gin.Context) {
 	// 转换为响应格式
 	todoResponses := make([]TodoResponse, len(todos))
 	for i, todo := range todos {
-		var categoryResp *CategoryResponse
+		// 构建基本响应
+		todoResponses[i] = TodoResponse{
+			ID:          todo.ID,
+			Title:       todo.Title,
+			Description: todo.Description,
+			Status:      todo.Status.String(),
+			Priority:    string(todo.Priority),
+			CategoryID:  todo.CategoryID,
+			Completed:   todo.Completed,
+			CreatedAt:   todo.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			UpdatedAt:   todo.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			Reminders:   make([]ReminderResponse, 0),
+		}
+
+		// 安全处理 DueDate
+		if todo.DueDate != nil {
+			todoResponses[i].DueDate = todo.DueDate.Format("2006-01-02T15:04:05Z07:00")
+		}
+
+		// 处理分类信息
 		if todo.Category != nil {
-			categoryResp = &CategoryResponse{
+			todoResponses[i].Category = &CategoryResponse{
 				ID:          todo.Category.ID,
 				Name:        todo.Category.Name,
 				Description: todo.Category.Description,
@@ -165,33 +197,22 @@ func (h *TodoHandler) List(c *gin.Context) {
 			}
 		}
 
-		reminderResps := make([]ReminderResponse, len(todo.Reminders))
-		for j, reminder := range todo.Reminders {
-			reminderResps[j] = ReminderResponse{
-				ID:         reminder.ID,
-				TodoID:     reminder.TodoID,
-				RemindAt:   reminder.RemindAt.Format("2006-01-02T15:04:05Z07:00"),
-				RemindType: reminder.RemindType.String(),
-				NotifyType: reminder.NotifyType.String(),
-				Status:     reminder.Status,
-				CreatedAt:  reminder.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-				UpdatedAt:  reminder.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		// 处理提醒列表
+		if len(todo.Reminders) > 0 {
+			reminderResps := make([]ReminderResponse, len(todo.Reminders))
+			for j, reminder := range todo.Reminders {
+				reminderResps[j] = ReminderResponse{
+					ID:         reminder.ID,
+					TodoID:     reminder.TodoID,
+					RemindAt:   reminder.RemindAt.Format("2006-01-02T15:04:05Z07:00"),
+					RemindType: reminder.RemindType.String(),
+					NotifyType: reminder.NotifyType.String(),
+					Status:     reminder.Status,
+					CreatedAt:  reminder.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+					UpdatedAt:  reminder.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+				}
 			}
-		}
-
-		todoResponses[i] = TodoResponse{
-			ID:          todo.ID,
-			Title:       todo.Title,
-			Description: todo.Description,
-			Status:      todo.Status.String(),
-			Priority:    string(todo.Priority),
-			DueDate:     todo.DueDate.Format("2006-01-02T15:04:05Z07:00"),
-			CategoryID:  todo.CategoryID,
-			Completed:   todo.Completed,
-			CreatedAt:   todo.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-			UpdatedAt:   todo.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
-			Category:    categoryResp,
-			Reminders:   reminderResps,
+			todoResponses[i].Reminders = reminderResps
 		}
 	}
 
@@ -235,13 +256,19 @@ func (h *TodoHandler) Get(c *gin.Context) {
 		Description: todo.Description,
 		Status:      todo.Status.String(),
 		Priority:    string(todo.Priority),
-		DueDate:     todo.DueDate.Format("2006-01-02T15:04:05Z07:00"),
 		CategoryID:  todo.CategoryID,
 		Completed:   todo.Completed,
 		CreatedAt:   todo.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:   todo.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		Reminders:   make([]ReminderResponse, 0), // 初始化为空数组而不是 nil
 	}
 
+	// 安全处理 DueDate
+	if todo.DueDate != nil {
+		todoResponse.DueDate = todo.DueDate.Format("2006-01-02T15:04:05Z07:00")
+	}
+
+	// 处理分类信息
 	if todo.Category != nil {
 		todoResponse.Category = &CategoryResponse{
 			ID:          todo.Category.ID,
@@ -251,6 +278,24 @@ func (h *TodoHandler) Get(c *gin.Context) {
 			CreatedAt:   todo.Category.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			UpdatedAt:   todo.Category.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		}
+	}
+
+	// 处理提醒列表
+	if len(todo.Reminders) > 0 {
+		reminderResps := make([]ReminderResponse, len(todo.Reminders))
+		for i, reminder := range todo.Reminders {
+			reminderResps[i] = ReminderResponse{
+				ID:         reminder.ID,
+				TodoID:     reminder.TodoID,
+				RemindAt:   reminder.RemindAt.Format("2006-01-02T15:04:05Z07:00"),
+				RemindType: reminder.RemindType.String(),
+				NotifyType: reminder.NotifyType.String(),
+				Status:     reminder.Status,
+				CreatedAt:  reminder.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+				UpdatedAt:  reminder.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			}
+		}
+		todoResponse.Reminders = reminderResps
 	}
 
 	response.Success(c, todoResponse)

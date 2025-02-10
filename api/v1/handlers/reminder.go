@@ -35,12 +35,17 @@ type ReminderResponse struct {
 // ReminderHandler 提醒处理器
 type ReminderHandler struct {
 	reminderService service.ReminderService
+	todoService     service.TodoService
 }
 
 // NewReminderHandler 创建提醒处理器实例
-func NewReminderHandler(reminderService service.ReminderService) *ReminderHandler {
+func NewReminderHandler(
+	reminderService service.ReminderService,
+	todoService service.TodoService,
+) *ReminderHandler {
 	return &ReminderHandler{
 		reminderService: reminderService,
+		todoService:     todoService,
 	}
 }
 
@@ -94,15 +99,26 @@ func (h *ReminderHandler) List(c *gin.Context) {
 		return
 	}
 
-	reminders, err := h.reminderService.ListByTodoID(c.Request.Context(), uint(todoID))
+	// 获取用户ID
+	userID := middleware.GetUserID(c)
+
+	// 验证待办事项是否属于当前用户
+	todo, err := h.todoService.Get(c.Request.Context(), uint(todoID), userID)
+	if err != nil {
+		response.Error(c, http.StatusForbidden, "待办事项不存在或无权访问")
+		return
+	}
+
+	reminders, err := h.reminderService.ListByTodoID(c.Request.Context(), todo.ID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "获取提醒列表失败")
 		return
 	}
 
-	var responses []*ReminderResponse
+	// 转换为响应格式
+	reminderResponses := make([]ReminderResponse, 0) // 初始化为空数组
 	for _, reminder := range reminders {
-		responses = append(responses, &ReminderResponse{
+		reminderResponses = append(reminderResponses, ReminderResponse{
 			ID:         reminder.ID,
 			TodoID:     reminder.TodoID,
 			RemindAt:   reminder.RemindAt.Format("2006-01-02T15:04:05Z07:00"),
@@ -114,7 +130,10 @@ func (h *ReminderHandler) List(c *gin.Context) {
 		})
 	}
 
-	response.Success(c, responses)
+	response.Success(c, gin.H{
+		"total": len(reminderResponses),
+		"items": reminderResponses,
+	})
 }
 
 // Update 更新提醒

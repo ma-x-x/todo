@@ -7,7 +7,7 @@ import (
 	"todo/internal/repository/interfaces"
 	"todo/pkg/config"
 	"todo/pkg/errors"
-	"todo/pkg/utils"
+	"todo/pkg/jwt"
 )
 
 // authService 实现认证服务接口
@@ -67,7 +67,7 @@ func (s *authService) Login(ctx context.Context, req *auth.LoginRequest) (string
 	}
 
 	// 生成JWT令牌
-	token, err := utils.GenerateToken(user.ID, s.jwtCfg)
+	token, err := jwt.GenerateToken(user.ID, s.jwtCfg)
 	if err != nil {
 		return "", nil, err
 	}
