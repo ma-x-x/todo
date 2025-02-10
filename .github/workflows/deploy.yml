@@ -137,7 +137,7 @@ jobs:
         password: ${{ secrets.SERVER_PASSWORD }}
         port: ${{ secrets.SERVER_PORT }}
         envs: MYSQL_ROOT_PASSWORD,DB_PASSWORD,DB_HOST,DB_USER,JWT_SECRET,REDIS_PASSWORD,APP_ENV,LOG_LEVEL,TZ,BUILD_VERSION
-        command_timeout: "10m"  # 增加命令超时时间
+        command_timeout: "20m"  # 增加超时时间到20分钟
         script: |
           cd /opt/todo-api
           # 清理旧的镜像和容器
@@ -151,4 +151,4 @@ jobs:
           export LOG_LEVEL="info"
           export BUILD_VERSION="${BUILD_VERSION}"
           chmod +x deploy.sh
-          ./deploy.sh 
+          ./deploy.sh || exit 1  # 添加错误检查 

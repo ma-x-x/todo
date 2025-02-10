@@ -157,28 +157,20 @@ else
     # 等待数据库完全就绪
     sleep 5
 
-    # 导入初始化 SQL
-    echo "正在导入数据库架构..."
-    # 检查是否已经存在表
+    # 检查数据库是否需要初始化
     TABLES_EXIST=$(docker-compose exec -T mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -N -e "
         SELECT COUNT(*) FROM information_schema.tables 
-        WHERE table_schema = 'todo_db' AND table_name IN ('users', 'todos', 'categories', 'reminders');
+        WHERE table_schema = 'todo_db' 
+        AND table_name IN ('users', 'todos', 'categories', 'reminders');
     " todo_db)
-    
+
     if [ "$TABLES_EXIST" = "0" ]; then
-        echo "数据库为空，导入初始架构..."
+        echo "数据库为空，开始初始化..."
         docker-compose exec -T mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" todo_db < scripts/init.sql
+        echo "数据库初始化完成"
     else
         echo "数据库表已存在，跳过初始化"
     fi
-
-    # 验证数据库结构
-    echo "验证数据库结构..."
-    docker-compose exec -T mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" todo_db -e "
-    SELECT TABLE_NAME, ENGINE, TABLE_ROWS, AUTO_INCREMENT
-    FROM information_schema.TABLES 
-    WHERE TABLE_SCHEMA = 'todo_db';
-    "
 fi
 
 # 检查并启动 Redis
@@ -207,16 +199,16 @@ docker-compose up -d --force-recreate app
 
 # 等待应用就绪
 echo "等待应用就绪..."
-for i in {1..60}; do
+for i in {1..90}; do  # 增加等待时间到3分钟
     if curl -s http://localhost:8081/health > /dev/null; then
         echo "应用已就绪！"
         break
     fi
-    if [ $i -eq 60 ]; then
+    if [ $i -eq 90 ]; then
         echo "应用未能在指定时间内就绪，但将继续执行..."
         break
     fi
-    echo "等待应用就绪中... ($i/60)"
+    echo "等待应用就绪中... ($i/90)"
     sleep 2
 done
 
