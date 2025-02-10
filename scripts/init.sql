@@ -63,8 +63,11 @@ CREATE TABLE IF NOT EXISTS reminders (
     CONSTRAINT chk_notify_type CHECK (notify_type IN ('email', 'push'))
 );
 
--- 添加索引
+-- 添加索引时检查是否存在
+DROP INDEX IF EXISTS idx_reminders_todo_id ON reminders;
 CREATE INDEX idx_reminders_todo_id ON reminders(todo_id);
+
+-- 其他索引也类似处理
 CREATE INDEX idx_reminders_remind_at ON reminders(remind_at);
 CREATE INDEX idx_reminders_todo_remind ON reminders(todo_id, deleted_at);
 CREATE INDEX idx_reminders_remind_status ON reminders(remind_at, status, deleted_at);

@@ -1,4 +1,4 @@
-version: "3.8"
+# 移除 version 字段，使用最新版本
 
 services:
   app:

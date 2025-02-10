@@ -159,7 +159,18 @@ else
 
     # 导入初始化 SQL
     echo "正在导入数据库架构..."
-    docker-compose exec -T mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" todo_db < scripts/init.sql
+    # 检查是否已经存在表
+    TABLES_EXIST=$(docker-compose exec -T mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -N -e "
+        SELECT COUNT(*) FROM information_schema.tables 
+        WHERE table_schema = 'todo_db' AND table_name IN ('users', 'todos', 'categories', 'reminders');
+    " todo_db)
+    
+    if [ "$TABLES_EXIST" = "0" ]; then
+        echo "数据库为空，导入初始架构..."
+        docker-compose exec -T mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" todo_db < scripts/init.sql
+    else
+        echo "数据库表已存在，跳过初始化"
+    fi
 
     # 验证数据库结构
     echo "验证数据库结构..."
