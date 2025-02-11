@@ -41,10 +41,10 @@ services:
     # 健康检查配置
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
-      interval: 30s  # 检查间隔
+      interval: 10s  # 减少检查间隔
       timeout: 10s   # 超时时间
-      retries: 3     # 重试次数
-      start_period: 30s  # 启动后等待时间
+      retries: 5     # 增加重试次数
+      start_period: 60s  # 增加启动等待时间
     
     # 依赖服务
     depends_on:

@@ -240,6 +240,14 @@ fi
 docker-compose build --no-cache app
 docker-compose up -d --force-recreate app
 
+# 输出容器创建后的即时状态
+echo "应用容器已创建，当前状态："
+docker inspect todo-api --format='{{.State.Status}}'
+
+# 输出健康检查配置
+echo "健康检查配置："
+docker inspect todo-api --format='{{.Config.Healthcheck}}'
+
 # 等待并检查应用日志
 echo "检查应用启动日志..."
 sleep 5
@@ -247,6 +255,9 @@ docker-compose logs app
 
 # 等待应用就绪
 echo "等待应用就绪..."
+# 增加初始等待时间，给应用更多启动时间
+sleep 10
+
 for i in {1..180}; do  # 最多等待3分钟
     # 检查健康检查接口，确保返回包含 "healthy" 的响应
     if curl -s -f http://localhost:8081/health | grep -q "healthy"; then
@@ -267,12 +278,23 @@ done
 echo "检查容器状态..."
 docker-compose ps
 
-# 如果应用不健康，输出详细日志
-if [ "$(docker inspect --format='{{.State.Health.Status}}' todo-api)" != "healthy" ]; then
-    echo "应用健康检查失败，输出详细日志："
-    docker-compose logs --tail=200 app
-    exit 1
-fi
+# 给应用更多时间达到健康状态
+max_health_checks=30
+for i in $(seq 1 $max_health_checks); do
+    status=$(docker inspect --format='{{.State.Health.Status}}' todo-api)
+    if [ "$status" = "healthy" ]; then
+        echo "应用健康状态检查通过！"
+        break
+    fi
+    if [ $i -eq $max_health_checks ]; then
+        echo "应用健康检查失败，当前状态: $status"
+        echo "输出详细日志："
+        docker-compose logs --tail=200 app
+        exit 1
+    fi
+    echo "等待应用达到健康状态... ($i/$max_health_checks)"
+    sleep 2
+done
 
 # 检查服务状态
 echo "检查服务状态..."
