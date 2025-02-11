@@ -187,6 +187,9 @@ echo "正在重新部署应用..."
 # 验证配置文件
 echo "验证配置文件..."
 if [ -f "configs/config.prod.yaml" ]; then
+    # 使用 envsubst 处理配置文件中的环境变量
+    envsubst < configs/config.prod.yaml > configs/config.prod.yaml.tmp
+    mv configs/config.prod.yaml.tmp configs/config.prod.yaml
     echo "配置文件内容:"
     cat configs/config.prod.yaml
 else

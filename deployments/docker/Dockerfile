@@ -8,7 +8,7 @@ WORKDIR /app
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
     # 安装必要的运行时依赖
     apk update && \
-    apk add --no-cache tzdata curl && \
+    apk add --no-cache tzdata curl gettext && \
     # 设置时区
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
     echo "Asia/Shanghai" > /etc/timezone && \

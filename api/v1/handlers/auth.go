@@ -70,7 +70,12 @@ func (h *AuthHandler) Register(c *gin.Context) {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req auth.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
+		// 优化验证错误提示
+		if validationErr := errors.ParseValidationError(err); validationErr != "" {
+			response.BadRequest(c, validationErr)
+			return
+		}
+		response.BadRequest(c, "无效的请求参数")
 		return
 	}
 
