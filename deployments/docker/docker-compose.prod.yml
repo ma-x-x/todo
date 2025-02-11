@@ -10,28 +10,23 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - DB_HOST=${DB_HOST:-mysql}
-      - DB_PORT=${DB_PORT:-3306}
-      - DB_USER=${DB_USER:-todo_user}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=todo_user
       - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME:-todo_db}
-      - REDIS_HOST=${REDIS_HOST:-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-""}
+      - DB_NAME=todo_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - CONFIG_FILE=/app/configs/config.prod.yaml
       - APP_ENV=prod
+      - LOG_LEVEL=info
+      - CONFIG_FILE=/app/configs/config.prod.yaml
       - TZ=Asia/Shanghai
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - SWAGGER_HOST=${SWAGGER_HOST:-api.example.com}
     volumes:
-      - ./configs:/app/configs
+      - ./configs:/app/configs:ro
       - ./logs:/app/logs
-      - /etc/localtime:/etc/localtime:ro
     networks:
       - todo-network
     healthcheck:
@@ -40,6 +35,11 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   mysql:
     image: mysql:8.0

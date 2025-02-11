@@ -1,6 +1,8 @@
 package router
 
 import (
+	"net/http"
+	"time"
 	"todo/api/v1/handlers"
 	"todo/internal/middleware"
 	"todo/internal/service"
@@ -11,7 +13,7 @@ import (
 )
 
 // InitRouter 初始化路由配置
-func InitRouter(cfg *config.Config, services *service.Services, rdb *redis.Client, r *gin.Engine) {
+func InitRouter(cfg *config.Config, services *service.ServiceCollection, rdb *redis.Client, r *gin.Engine) {
 	// 1. 首先注册全局中间件
 	r.Use(middleware.Cors()) // CORS 中间件必须第一个注册
 	r.Use(gin.Recovery())
@@ -72,4 +74,30 @@ func InitRouter(cfg *config.Config, services *service.Services, rdb *redis.Clien
 			reminders.DELETE("/:id", reminderHandler.Delete)
 		}
 	}
+
+	// 添加健康检查路由
+	r.GET("/health", func(c *gin.Context) {
+		// 检查数据库连接
+		if err := services.CheckDatabaseHealth(); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"status": "unhealthy",
+				"error":  "database connection failed",
+			})
+			return
+		}
+
+		// 检查 Redis 连接
+		if err := services.CheckRedisHealth(); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"status": "unhealthy",
+				"error":  "redis connection failed",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status": "healthy",
+			"time":   time.Now().Format(time.RFC3339),
+		})
+	})
 }

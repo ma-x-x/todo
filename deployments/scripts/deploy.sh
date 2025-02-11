@@ -66,6 +66,7 @@ export REDIS_HOST=redis
 export REDIS_PORT=6379
 export REDIS_PASSWORD=${REDIS_PASSWORD}
 export JWT_SECRET=${JWT_SECRET}
+export SWAGGER_HOST=${SWAGGER_HOST:-api.example.com}
 export APP_ENV=prod
 export LOG_LEVEL=info
 export CONFIG_FILE=/app/configs/config.prod.yaml
@@ -200,20 +201,37 @@ fi
 docker-compose build --no-cache app
 docker-compose up -d --force-recreate app
 
+# 等待并检查应用日志
+echo "检查应用启动日志..."
+sleep 5
+docker-compose logs app
+
 # 等待应用就绪
 echo "等待应用就绪..."
-for i in {1..90}; do  # 增加等待时间到3分钟
+for i in {1..90}; do
     if curl -s http://localhost:8081/health > /dev/null; then
         echo "应用已就绪！"
         break
     fi
     if [ $i -eq 90 ]; then
-        echo "应用未能在指定时间内就绪，但将继续执行..."
-        break
+        echo "应用未能在指定时间内就绪，检查日志..."
+        docker-compose logs --tail=100 app
+        exit 1
     fi
     echo "等待应用就绪中... ($i/90)"
     sleep 2
 done
+
+# 检查容器状态
+echo "检查容器状态..."
+docker-compose ps
+
+# 如果应用不健康，输出详细日志
+if [ "$(docker inspect --format='{{.State.Health.Status}}' todo-api)" != "healthy" ]; then
+    echo "应用健康检查失败，输出详细日志："
+    docker-compose logs --tail=200 app
+    exit 1
+fi
 
 # 检查服务状态
 echo "检查服务状态..."

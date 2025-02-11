@@ -32,6 +32,7 @@ type ServerConfig struct {
 	ReadTimeout  int    `mapstructure:"read_timeout"`  // 读取超时时间（秒）
 	WriteTimeout int    `mapstructure:"write_timeout"` // 写入超时时间（秒）
 	IdleTimeout  int    `mapstructure:"idle_timeout"`  // 空闲超时时间（秒）
+	SwaggerHost  string `mapstructure:"swagger_host"`  // 添加这行
 }
 
 // RedisConfig Redis配置

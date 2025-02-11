@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"todo/docs"
 	_ "todo/docs" // 导入swagger文档，用于API文档生成
 	"todo/internal/models"
 	_ "todo/internal/models" // 导入模型定义
@@ -111,7 +112,19 @@ func run() error {
 	repos := repository.NewRepositories(db, rdb)
 
 	// 初始化服务层
-	services := service.NewServices(repos, cfg)
+	authService := service.NewAuthService(repos.User, repos.Auth, &cfg.JWT)
+	todoService := service.NewTodoService(repos.Todo)
+	categoryService := service.NewCategoryService(repos.Category)
+	reminderService := service.NewReminderService(repos.Reminder, repos.Todo)
+
+	services := service.NewServiceCollection(
+		authService,
+		todoService,
+		categoryService,
+		reminderService,
+		db,  // 数据库连接
+		rdb, // Redis连接
+	)
 
 	// 5. 设置Gin框架的运行模式
 	log.Printf("设置 Gin 模式之前: %s", cfg.Server.Mode)
@@ -130,6 +143,21 @@ func run() error {
 
 	// 添加 Swagger 路由
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// 配置 Swagger
+	docs.SwaggerInfo.Title = "Todo API"
+	docs.SwaggerInfo.Description = "Todo 应用后端 API 文档"
+	docs.SwaggerInfo.Version = "1.0"
+
+	// 使用配置中的 swagger_host
+	if cfg.Server.Mode == "release" && cfg.Server.SwaggerHost != "" {
+		docs.SwaggerInfo.Host = cfg.Server.SwaggerHost
+	} else {
+		docs.SwaggerInfo.Host = fmt.Sprintf("localhost:%d", cfg.Server.Port)
+	}
+
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
 	// 7. 配置HTTP服务器
 	srv := &http.Server{
