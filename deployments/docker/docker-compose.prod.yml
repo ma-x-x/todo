@@ -1,19 +1,23 @@
-# 移除 version 字段，使用最新版本
+# 生产环境的 Docker Compose 配置文件
 
 services:
+  # API 应用服务配置
   app:
+    # 指定镜像名称，使用 BUILD_VERSION 环境变量作为标签
     image: todo-api:${BUILD_VERSION:-latest}
     build:
       context: .
       dockerfile: Dockerfile
     container_name: todo-api
     ports:
-      - "8081:8081"
+      - "8081:8081"  # 端口映射：宿主机端口:容器端口
+    
+    # 环境变量配置
     environment:
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_USER=todo_user
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD}  # 从环境变量获取数据库密码
       - DB_NAME=todo_db
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -24,23 +28,32 @@ services:
       - CONFIG_FILE=/app/configs/config.prod.yaml
       - TZ=Asia/Shanghai
       - SWAGGER_HOST=${SWAGGER_HOST:-api.example.com}
+    
+    # 数据卷挂载
     volumes:
-      - ./configs:/app/configs:ro
-      - ./logs:/app/logs
+      - ./configs:/app/configs:ro  # 只读方式挂载配置文件
+      - ./logs:/app/logs  # 挂载日志目录
+    
+    # 网络配置
     networks:
       - todo-network
+    
+    # 健康检查配置
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+      interval: 30s  # 检查间隔
+      timeout: 10s   # 超时时间
+      retries: 3     # 重试次数
+      start_period: 30s  # 启动后等待时间
+    
+    # 依赖服务
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
 
+  # MySQL 服务配置
   mysql:
     image: mysql:8.0
     container_name: todo-mysql
@@ -54,8 +67,8 @@ services:
       - MYSQL_PASSWORD=${DB_PASSWORD}
       - TZ=Asia/Shanghai
     volumes:
-      - mysql_data:/var/lib/mysql
-      - /etc/localtime:/etc/localtime:ro
+      - mysql_data:/var/lib/mysql  # 数据持久化
+      - /etc/localtime:/etc/localtime:ro  # 同步宿主机时间
     networks:
       - todo-network
     command: --default-authentication-plugin=mysql_native_password
@@ -65,6 +78,7 @@ services:
       timeout: 3s
       retries: 5
 
+  # Redis 服务配置
   redis:
     image: redis:6.2
     container_name: todo-redis
@@ -74,7 +88,7 @@ services:
     environment:
       - TZ=Asia/Shanghai
     volumes:
-      - redis_data:/data
+      - redis_data:/data  # Redis 数据持久化
       - /etc/localtime:/etc/localtime:ro
     command: redis-server --requirepass "${REDIS_PASSWORD}" --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
     healthcheck:
@@ -85,10 +99,12 @@ services:
     networks:
       - todo-network
 
+# 网络配置
 networks:
   todo-network:
     driver: bridge
 
+# 数据卷配置
 volumes:
-  mysql_data:
-  redis_data: 
+  mysql_data:  # MySQL 数据持久化卷
+  redis_data:  # Redis 数据持久化卷 

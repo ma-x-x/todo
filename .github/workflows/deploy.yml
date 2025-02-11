@@ -20,6 +20,20 @@ jobs:
       with:
         go-version: '1.22'
         
+    # 添加系统参数设置步骤
+    - name: Setup System Parameters
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT }}
+        script: |
+          # 上传并执行系统参数设置脚本
+          cd /opt/todo-api
+          sudo chmod +x setup_system.sh
+          sudo ./setup_system.sh
+        
     # 缓存 Go modules
     - name: Go Module Cache
       uses: actions/cache@v3
@@ -58,14 +72,13 @@ jobs:
         mkdir -p deployment/scripts
         cp build/todo-api deployment/
         cp configs/config.prod.yaml deployment/configs/
-        # 验证配置文件
-        echo "验证配置文件内容:"
-        cat deployment/configs/config.prod.yaml
         cp deployments/docker/docker-compose.prod.yml deployment/docker-compose.yml
         cp deployments/docker/Dockerfile deployment/
         cp deployments/scripts/deploy.sh deployment/
+        cp deployments/scripts/setup_system.sh deployment/
         cp scripts/init.sql deployment/scripts/
         chmod +x deployment/deploy.sh
+        chmod +x deployment/setup_system.sh
         
     - name: Copy files to server
       uses: appleboy/scp-action@v0.1.7

@@ -3,32 +3,34 @@
 # 确保脚本在出错时退出
 set -e
 
-# 检查并设置系统参数
-setup_system_params() {
-    echo "正在设置系统参数..."
+# 系统参数检查函数
+check_system_params() {
+    echo "检查系统参数..."
+    local warnings=()
     
-    # 设置 vm.overcommit_memory
+    # 检查系统参数并收集警告信息
     if [ "$(sysctl -n vm.overcommit_memory)" != "1" ]; then
-        echo "设置 vm.overcommit_memory = 1"
-        sudo sysctl -w vm.overcommit_memory=1
-        echo "vm.overcommit_memory = 1" | sudo tee -a /etc/sysctl.conf
+        warnings+=("vm.overcommit_memory 未设置为推荐值 1，可能影响 Redis 性能")
     fi
     
-    # 设置 somaxconn
     if [ "$(sysctl -n net.core.somaxconn)" -lt "512" ]; then
-        echo "设置 net.core.somaxconn = 512"
-        sudo sysctl -w net.core.somaxconn=512
-        echo "net.core.somaxconn = 512" | sudo tee -a /etc/sysctl.conf
+        warnings+=("net.core.somaxconn 小于推荐值 512，可能影响高并发处理")
     fi
     
-    # 禁用 THP (Transparent Huge Pages)
     if [ -f /sys/kernel/mm/transparent_hugepage/enabled ]; then
-        echo never | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
-        echo never | sudo tee /sys/kernel/mm/transparent_hugepage/defrag
+        if ! grep -q "\[never\]" /sys/kernel/mm/transparent_hugepage/enabled; then
+            warnings+=("透明大页面(THP)未禁用，可能导致 Redis 性能问题")
+        fi
+    fi
+
+    # 如果有警告，统一显示
+    if [ ${#warnings[@]} -gt 0 ]; then
+        echo "⚠️ 性能优化建议："
+        printf '%s\n' "${warnings[@]}"
     fi
 }
 
-# 检查必要的环境变量
+# 检查环境变量
 check_required_env() {
     local missing_vars=()
     
@@ -52,8 +54,8 @@ check_required_env() {
 # 检查环境变量
 check_required_env
 
-# 设置系统参数
-setup_system_params
+# 部署前的系统检查
+check_system_params
 
 # 设置环境变量
 export MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
@@ -208,18 +210,20 @@ docker-compose logs app
 
 # 等待应用就绪
 echo "等待应用就绪..."
-for i in {1..90}; do
-    if curl -s http://localhost:8081/health > /dev/null; then
+for i in {1..180}; do  # 最多等待3分钟
+    # 检查健康检查接口，确保返回包含 "healthy" 的响应
+    if curl -s -f http://localhost:8081/health | grep -q "healthy"; then
         echo "应用已就绪！"
         break
     fi
-    if [ $i -eq 90 ]; then
+    # 如果达到最大重试次数，则输出日志并退出
+    if [ $i -eq 180 ]; then
         echo "应用未能在指定时间内就绪，检查日志..."
         docker-compose logs --tail=100 app
         exit 1
     fi
-    echo "等待应用就绪中... ($i/90)"
-    sleep 2
+    echo "等待应用就绪中... ($i/180)"
+    sleep 2  # 每次检查间隔2秒
 done
 
 # 检查容器状态
@@ -243,27 +247,11 @@ docker-compose logs --tail=50 app
 
 echo "部署成功完成！"
 
-# 检查系统参数
-check_system_params() {
+# 在部署开始时添加
+if [ -x "$(command -v sudo)" ]; then
     echo "检查系统参数..."
-    
-    # 检查 vm.overcommit_memory
-    if [ "$(sysctl -n vm.overcommit_memory)" != "1" ]; then
-        echo "警告：vm.overcommit_memory 未设置为 1"
+    if ! sudo ./setup_system.sh; then
+        echo "⚠️ 系统参数可能未达到最优状态，可能会影响性能"
+        echo "建议在部署后运行 sudo ./setup_system.sh 进行优化"
     fi
-    
-    # 检查 somaxconn
-    if [ "$(sysctl -n net.core.somaxconn)" -lt "512" ]; then
-        echo "警告：net.core.somaxconn 小于 512"
-    fi
-    
-    # 检查 THP
-    if [ -f /sys/kernel/mm/transparent_hugepage/enabled ]; then
-        if ! grep -q "\[never\]" /sys/kernel/mm/transparent_hugepage/enabled; then
-            echo "警告：透明大页面(THP)未设置为 never"
-        fi
-    fi
-}
-
-# 在部署前检查系统参数
-check_system_params 
+fi 

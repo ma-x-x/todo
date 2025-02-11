@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 	"todo/docs"
@@ -151,7 +152,12 @@ func run() error {
 
 	// 使用配置中的 swagger_host
 	if cfg.Server.Mode == "release" && cfg.Server.SwaggerHost != "" {
-		docs.SwaggerInfo.Host = cfg.Server.SwaggerHost
+		// 如果 SwaggerHost 中没有包含端口，则添加端口
+		if !strings.Contains(cfg.Server.SwaggerHost, ":") {
+			docs.SwaggerInfo.Host = fmt.Sprintf("%s:%d", cfg.Server.SwaggerHost, cfg.Server.Port)
+		} else {
+			docs.SwaggerInfo.Host = cfg.Server.SwaggerHost
+		}
 	} else {
 		docs.SwaggerInfo.Host = fmt.Sprintf("localhost:%d", cfg.Server.Port)
 	}
