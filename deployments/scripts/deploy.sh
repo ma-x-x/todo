@@ -248,7 +248,7 @@ docker-compose logs --tail=50 app
 echo "部署成功完成！"
 
 # 在部署开始时添加
-if [ -x "$(command -v sudo)" ]; then
+if [ -x "$(command -v sudo)" ] && [ -f "./setup_system.sh" ]; then
     echo "检查系统参数..."
     if ! sudo ./setup_system.sh; then
         echo "⚠️ 系统参数可能未达到最优状态，可能会影响性能"
