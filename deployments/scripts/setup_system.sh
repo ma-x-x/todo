@@ -72,7 +72,7 @@ WantedBy=multi-user.target
 EOF
 
 # 2. 网络相关配置
-echo "net.core.somaxconn = 512" > /etc/sysctl.d/network-tuning.conf
+echo "net.core.somaxconn = 1024" > /etc/sysctl.d/network-tuning.conf
 sysctl -p /etc/sysctl.d/network-tuning.conf
 
 # 3. 启用服务

@@ -90,12 +90,23 @@ services:
     volumes:
       - redis_data:/data  # Redis 数据持久化
       - /etc/localtime:/etc/localtime:ro
-    command: redis-server --requirepass "${REDIS_PASSWORD}" --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+    command: >
+      redis-server 
+      --requirepass "${REDIS_PASSWORD}"
+      --appendonly yes 
+      --maxmemory 2gb 
+      --maxmemory-policy allkeys-lru
+      --tcp-backlog 511
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
-      interval: 5s
-      timeout: 3s
+      test: |
+        /bin/sh -c '[ -n "$${REDIS_PASSWORD}" ] && \
+        redis-cli -a "$${REDIS_PASSWORD}" ping || redis-cli ping'
+      interval: 10s
+      timeout: 5s
       retries: 5
+      start_period: 30s
+    sysctls:
+      - net.core.somaxconn=511
     networks:
       - todo-network
 

@@ -13,8 +13,8 @@ check_system_params() {
         warnings+=("vm.overcommit_memory 未设置为推荐值 1，可能影响 Redis 性能")
     fi
     
-    if [ "$(sysctl -n net.core.somaxconn)" -lt "512" ]; then
-        warnings+=("net.core.somaxconn 小于推荐值 512，可能影响高并发处理")
+    if [ "$(sysctl -n net.core.somaxconn)" -lt "1024" ]; then
+        warnings+=("net.core.somaxconn 小于推荐值 1024，可能影响高并发处理")
     fi
     
     if [ -f /sys/kernel/mm/transparent_hugepage/enabled ]; then
@@ -92,16 +92,35 @@ check_mysql_health() {
 }
 
 check_redis_health() {
+    local max_attempts=30
+    local attempt=1
+    local wait_time=2
+
     if [ -z "${REDIS_PASSWORD}" ]; then
-        if docker exec todo-redis redis-cli -h redis ping > /dev/null 2>&1; then
-            return 0  # Redis 正常（无密码）
-        fi
+        while [ $attempt -le $max_attempts ]; do
+            if docker exec todo-redis redis-cli -h redis ping > /dev/null 2>&1; then
+                echo "Redis 连接成功（无密码）"
+                return 0
+            fi
+            echo "尝试连接 Redis 中... ($attempt/$max_attempts)"
+            sleep $wait_time
+            attempt=$((attempt + 1))
+        done
     else
-        if docker exec todo-redis redis-cli -h redis -a "${REDIS_PASSWORD}" ping > /dev/null 2>&1; then
-            return 0  # Redis 正常（有密码）
-        fi
+        while [ $attempt -le $max_attempts ]; do
+            if docker exec todo-redis redis-cli -h redis -a "${REDIS_PASSWORD}" ping > /dev/null 2>&1; then
+                echo "Redis 连接成功（带密码）"
+                return 0
+            fi
+            echo "尝试连接 Redis 中... ($attempt/$max_attempts)"
+            sleep $wait_time
+            attempt=$((attempt + 1))
+        done
     fi
-    return 1  # Redis 异常
+
+    echo "Redis 健康检查失败，查看日志："
+    docker logs todo-redis
+    return 1
 }
 
 # 等待 MySQL 就绪的函数
@@ -176,12 +195,30 @@ else
     fi
 fi
 
+# Redis 启动前临时设置系统参数
+echo "临时设置系统参数..."
+if [ -x "$(command -v sudo)" ]; then
+    sudo sysctl -w net.core.somaxconn=1024 || echo "警告: 无法设置 somaxconn"
+fi
+
 # 检查并启动 Redis
 if check_service_exists "todo-redis" && check_redis_health; then
     echo "Redis 已在运行且状态正常，跳过部署"
 else
     echo "正在启动 Redis..."
+    echo "Redis 配置信息："
+    echo "- 密码已设置: $([ -n "${REDIS_PASSWORD}" ] && echo "是" || echo "否")"
+    echo "- 数据持久化: 已启用"
+    echo "- 最大内存: 2GB"
+    
     docker-compose up -d redis
+    
+    echo "等待 Redis 启动..."
+    sleep 5
+    
+    echo "Redis 容器日志："
+    docker-compose logs redis
+    
     wait_for_redis || exit 1
 fi
 
