@@ -6,6 +6,8 @@ import (
 	"todo/internal/models"
 	"todo/internal/repository/interfaces"
 
+	"log"
+
 	"gorm.io/gorm"
 )
 
@@ -44,7 +46,14 @@ func (r *ReminderRepository) ListByTodoID(ctx context.Context, todoID uint) ([]*
 
 // Update 更新提醒
 func (r *ReminderRepository) Update(ctx context.Context, reminder *models.Reminder) error {
-	return r.BaseRepository.Update(ctx, reminder)
+	log.Printf("执行数据库更新操作 [ID: %d]", reminder.ID)
+	err := r.BaseRepository.Update(ctx, reminder)
+	if err != nil {
+		log.Printf("数据库更新失败 [ID: %d]: %v", reminder.ID, err)
+		return err
+	}
+	log.Printf("数据库更新成功 [ID: %d]", reminder.ID)
+	return nil
 }
 
 // Delete 删除提醒

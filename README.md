@@ -113,83 +113,102 @@ curl -X POST http://localhost:8080/api/v1/todos \
 
 ```
 todo
-├── api                 # API 接口定义和处理
-│   └── v1
-│       ├── dto        # 数据传输对象(Data Transfer Objects)
-│       │   ├── auth   # 认证相关DTO
-│       │   ├── category   # 分类相关DTO
-│       │   ├── reminder   # 提醒相关DTO
-│       │   └── todo       # 待办事项相关DTO
-│       └── handlers       # HTTP请求处理器
-├── cmd                 # 主要应用程序入口
-│   └── server         # 服务器启动入口
-├── configs            # 配置文件目录
-├── deployments        # 部署相关配置
-│   ├── docker        # Docker部署配置
-│   └── kubernetes    # Kubernetes部署配置
-├── docs              # 文档和API文档(Swagger)
-├── internal          # 私有应用程序代码
-│   ├── middleware    # HTTP中间件
-│   ├── models        # 数据模型定义
-│   ├── repository    # 数据访问层
-│   │   ├── db       # 具体数据库操作实现
-│   │   └── ...      # 仓储接口定义
-│   ├── router       # 路由配置
-│   └── service      # 业务逻辑层
-│       ├── impl     # 接口实现
-│       └── ...      # 服务接口定义
-├── pkg              # 可重用的库代码
-│   ├── cache        # 缓存组件
-│   ├── config       # 配置管理
-│   ├── database     # 数据库连接管理
-│   ├── db           # 数据库工具
-│   ├── errors       # 错误处理
-│   ├── lock         # 分布式锁
-│   ├── logger       # 日志组件
-│   ├── middleware   # 通用中间件
-│   ├── monitor      # 监控组件
-│   ├── queue        # 队列组件
-│   └── utils        # 通用工具函数
-├── logs             # 日志文件目录
-├── tmp              # 临时文件
-├── Makefile         # 项目管理命令
-├── go.mod           # Go模块定义
-└── README.md        # 项目说明文档
+├── api                     # API 层，处理 HTTP 请求和响应
+│   └── v1                 # API 版本控制
+│       ├── dto            # 数据传输对象，定义请求和响应结构
+│       │   ├── auth       # 认证相关 DTO
+│       │   ├── category   # 分类相关 DTO
+│       │   ├── reminder   # 提醒相关 DTO
+│       │   └── todo       # 待办事项相关 DTO
+│       └── handlers       # HTTP 请求处理器
+├── cmd                    # 应用程序入口
+│   └── server            # API 服务器
+│       └── main.go       # 主程序入口点
+├── configs               # 配置文件目录
+│   ├── config.dev.yaml   # 开发环境配置
+│   ├── config.prod.yaml  # 生产环境配置
+│   └── config.yaml       # 基础配置
+├── deployments           # 部署相关配置和脚本
+│   ├── docker           # Docker 容器化配置
+│   ├── kubernetes       # Kubernetes 编排配置
+│   └── scripts          # 部署自动化脚本
+├── docs                 # 项目文档
+│   ├── docs.go          # Swagger 自动生成的文档
+│   ├── swagger.json     # Swagger API 定义
+│   └── swagger.yaml     # Swagger API 配置
+├── internal             # 私有应用代码
+│   ├── middleware      # HTTP 中间件
+│   ├── models         # 数据模型定义
+│   ├── repository     # 数据访问层实现
+│   ├── router         # 路由注册和管理
+│   └── service        # 业务逻辑层
+├── pkg                 # 可复用的公共代码包
+│   ├── cache          # 缓存实现
+│   ├── config         # 配置管理
+│   ├── database       # 数据库连接和管理
+│   ├── errors         # 错误处理
+│   ├── jwt            # JWT 认证
+│   ├── logger         # 日志处理
+│   ├── monitor        # 监控指标
+│   ├── queue          # 消息队列
+│   ├── response       # HTTP 响应处理
+│   └── utils          # 通用工具函数
+├── scripts            # 维护脚本和工具
+│   └── init.sql      # 数据库初始化脚本
+├── build             # 编译构建产物
+├── logs              # 应用日志文件
+├── tmp               # 临时文件
+├── Makefile          # 项目管理命令
+├── README.md         # 项目说明文档
+└── go.mod            # Go 模块依赖定义
 ```
 
-目录结构说明：
+目录结构详细说明：
 
-1. **api/** - API层
-   - 处理HTTP请求响应
-   - 数据验证和转换
-   - API文档定义
+1. **api/** - API 层
+   - 处理 HTTP 请求和响应
+   - 实现 RESTful API 接口
+   - 请求参数验证和响应格式化
+   - 版本化 API 管理
 
 2. **internal/** - 内部应用代码
-   - models: 核心数据模型
-   - repository: 数据访问层，处理数据持久化
-   - service: 业务逻辑层，实现核心功能
-   - middleware: 请求处理中间件
-   - router: 路由配置和管理
+   - models: 定义核心数据结构和业务实体
+   - repository: 实现数据持久化和访问逻辑
+   - service: 封装核心业务逻辑
+   - middleware: 处理横切关注点（认证、日志等）
+   - router: 管理 API 路由和处理器映射
 
 3. **pkg/** - 公共代码包
-   - 可被外部项目引用的通用组件
-   - 基础设施代码
-   - 工具函数和助手方法
+   - cache: 实现多级缓存策略
+   - config: 处理配置加载和管理
+   - database: 数据库连接池和操作封装
+   - errors: 统一错误处理机制
+   - jwt: 用户认证和授权
+   - logger: 结构化日志记录
+   - monitor: 性能监控和指标收集
+   - queue: 异步任务处理
+   - response: 统一响应格式
+   - utils: 通用辅助函数
 
 4. **configs/** - 配置文件
-   - 应用配置
-   - 环境变量
-   - 部署配置
+   - 支持多环境配置
+   - 敏感配置分离
+   - 配置热重载
 
 5. **deployments/** - 部署配置
-   - Docker容器化配置
-   - Kubernetes编排配置
-   - 部署脚本和说明
+   - docker: 容器化部署配置
+   - kubernetes: 容器编排配置
+   - scripts: 自动化部署脚本
 
-6. **docs/** - 文档
-   - API文档(Swagger)
-   - 设计文档
+6. **docs/** - 项目文档
+   - API 文档 (Swagger)
+   - 架构设计文档
    - 开发指南
+
+7. **scripts/** - 工具脚本
+   - 数据库初始化
+   - 维护工具
+   - 自动化任务
 
 主要业务模块：
 

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"todo/api/v1/dto/reminder"
@@ -153,19 +155,22 @@ func (h *ReminderHandler) List(c *gin.Context) {
 func (h *ReminderHandler) Update(c *gin.Context) {
 	var req reminder.UpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("绑定更新提醒请求参数失败: %v", err)
 		response.BadRequest(c, err.Error())
 		return
 	}
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
+		log.Printf("解析提醒ID失败: %v", err)
 		response.BadRequest(c, "无效的提醒ID")
 		return
 	}
 
 	userID := middleware.GetUserID(c)
 	if err := h.reminderService.Update(c.Request.Context(), uint(id), userID, &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, "更新提醒失败")
+		log.Printf("更新提醒失败: %v", err)
+		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("更新提醒失败: %v", err))
 		return
 	}
 

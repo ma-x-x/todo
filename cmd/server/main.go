@@ -12,9 +12,7 @@ import (
 	"syscall"
 	"time"
 	"todo/docs"
-	_ "todo/docs" // 导入swagger文档，用于API文档生成
 	"todo/internal/models"
-	_ "todo/internal/models" // 导入模型定义
 	"todo/internal/repository"
 	routes "todo/internal/router"
 	"todo/internal/service"
