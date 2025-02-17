@@ -13,27 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ReminderResponse 提醒响应
-// @Description 提醒信息响应
-type ReminderResponse struct {
-	// 提醒ID
-	ID uint `json:"id" example:"1"`
-	// 待办事项ID
-	TodoID uint `json:"todoId" example:"1"`
-	// 提醒时间
-	RemindAt string `json:"remindAt" example:"2024-02-08T17:10:54+08:00"`
-	// 提醒类型
-	RemindType string `json:"remindType" example:"once"`
-	// 通知类型
-	NotifyType string `json:"notifyType" example:"email"`
-	// 提醒状态
-	Status bool `json:"status" example:"false"`
-	// 创建时间
-	CreatedAt string `json:"createdAt" example:"2024-02-08T17:10:54+08:00"`
-	// 更新时间
-	UpdatedAt string `json:"updatedAt" example:"2024-02-08T17:10:54+08:00"`
-}
-
 // ReminderHandler 提醒处理器
 type ReminderHandler struct {
 	reminderService service.ReminderService
@@ -89,7 +68,7 @@ func (h *ReminderHandler) Create(c *gin.Context) {
 // @Produce json
 // @Param Authorization header string true "Bearer JWT令牌"
 // @Param todo_id path int true "待办事项ID"
-// @Success 200 {object} response.Response{data=gin.H{items=[]ReminderResponse,total=int}} "获取成功"
+// @Success 200 {object} response.Response{data=gin.H{items=[]reminder.ReminderResponse,total=int}} "获取成功"
 // @Failure 400 {object} response.Response "无效的待办事项ID"
 // @Failure 401 {object} response.Response "未授权访问"
 // @Failure 500 {object} response.Response "服务器内部错误"
@@ -117,24 +96,9 @@ func (h *ReminderHandler) List(c *gin.Context) {
 		return
 	}
 
-	// 转换为响应格式
-	reminderResponses := make([]ReminderResponse, 0) // 初始化为空数组
-	for _, reminder := range reminders {
-		reminderResponses = append(reminderResponses, ReminderResponse{
-			ID:         reminder.ID,
-			TodoID:     reminder.TodoID,
-			RemindAt:   reminder.RemindAt.Format("2006-01-02T15:04:05Z07:00"),
-			RemindType: reminder.RemindType.String(),
-			NotifyType: reminder.NotifyType.String(),
-			Status:     reminder.Status,
-			CreatedAt:  reminder.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-			UpdatedAt:  reminder.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		})
-	}
-
 	response.Success(c, gin.H{
-		"total": len(reminderResponses),
-		"items": reminderResponses,
+		"total": len(reminders),
+		"items": reminders,
 	})
 }
 
@@ -214,7 +178,7 @@ func (h *ReminderHandler) Delete(c *gin.Context) {
 // @Produce json
 // @Param Authorization header string true "Bearer JWT令牌"
 // @Param id path int true "提醒ID"
-// @Success 200 {object} response.Response{data=ReminderResponse} "获取成功"
+// @Success 200 {object} response.Response{data=reminder.ReminderResponse} "获取成功"
 // @Failure 400 {object} response.Response "无效的提醒ID"
 // @Failure 401 {object} response.Response "未授权访问"
 // @Failure 500 {object} response.Response "服务器内部错误"
@@ -233,16 +197,5 @@ func (h *ReminderHandler) Get(c *gin.Context) {
 		return
 	}
 
-	reminderResponse := ReminderResponse{
-		ID:         reminder.ID,
-		TodoID:     reminder.TodoID,
-		RemindAt:   reminder.RemindAt.Format("2006-01-02T15:04:05Z07:00"),
-		RemindType: reminder.RemindType.String(),
-		NotifyType: reminder.NotifyType.String(),
-		Status:     reminder.Status,
-		CreatedAt:  reminder.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt:  reminder.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
-	}
-
-	response.Success(c, reminderResponse)
+	response.Success(c, reminder)
 }

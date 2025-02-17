@@ -11,23 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CategoryResponse 分类响应
-// @Description 分类信息响应
-type CategoryResponse struct {
-	// 分类ID
-	ID uint `json:"id" example:"1"`
-	// 分类名称
-	Name string `json:"name" example:"工作"`
-	// 分类描述
-	Description string `json:"description" example:"工作相关的待办事项"`
-	// 分类颜色
-	Color string `json:"color" example:"#FF0000"`
-	// 创建时间
-	CreatedAt string `json:"createdAt" example:"2024-02-08T17:10:54+08:00"`
-	// 更新时间
-	UpdatedAt string `json:"updatedAt" example:"2024-02-08T17:10:54+08:00"`
-}
-
 // CategoryHandler 分类处理器
 type CategoryHandler struct {
 	categoryService service.CategoryService
@@ -78,7 +61,7 @@ func (h *CategoryHandler) Create(c *gin.Context) {
 // @Produce json
 // @Param Authorization header string true "Bearer JWT令牌"
 // @Param id path int true "分类ID"
-// @Success 200 {object} response.Response{data=CategoryResponse} "获取成功"
+// @Success 200 {object} response.Response{data=category.CategoryResponse} "获取成功"
 // @Failure 400 {object} response.Response "无效的ID"
 // @Failure 401 {object} response.Response "未授权访问"
 // @Failure 500 {object} response.Response "服务器内部错误"
@@ -91,20 +74,20 @@ func (h *CategoryHandler) Get(c *gin.Context) {
 	}
 
 	userID := middleware.GetUserID(c)
-	category, err := h.categoryService.Get(c.Request.Context(), uint(id), userID)
+	cat, err := h.categoryService.Get(c.Request.Context(), uint(id), userID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "获取分类失败")
 		return
 	}
 
 	// 转换为响应格式
-	categoryResponse := CategoryResponse{
-		ID:          category.ID,
-		Name:        category.Name,
-		Description: category.Description,
-		Color:       category.Color,
-		CreatedAt:   category.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt:   category.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	categoryResponse := category.CategoryResponse{
+		ID:          cat.ID,
+		Name:        cat.Name,
+		Description: cat.Description,
+		Color:       cat.Color,
+		CreatedAt:   cat.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:   cat.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
 	response.Success(c, categoryResponse)
@@ -117,7 +100,7 @@ func (h *CategoryHandler) Get(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param Authorization header string true "Bearer JWT令牌"
-// @Success 200 {object} response.Response{data=gin.H{items=[]CategoryResponse,total=int}} "获取成功"
+// @Success 200 {object} response.Response{data=gin.H{items=[]category.CategoryResponse,total=int}} "获取成功"
 // @Failure 401 {object} response.Response "未授权访问"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /categories [get]
@@ -130,15 +113,15 @@ func (h *CategoryHandler) List(c *gin.Context) {
 	}
 
 	// 转换为响应格式
-	categoryResponses := make([]CategoryResponse, len(categories))
-	for i, category := range categories {
-		categoryResponses[i] = CategoryResponse{
-			ID:          category.ID,
-			Name:        category.Name,
-			Description: category.Description,
-			Color:       category.Color,
-			CreatedAt:   category.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-			UpdatedAt:   category.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	categoryResponses := make([]category.CategoryResponse, len(categories))
+	for i, cat := range categories {
+		categoryResponses[i] = category.CategoryResponse{
+			ID:          cat.ID,
+			Name:        cat.Name,
+			Description: cat.Description,
+			Color:       cat.Color,
+			CreatedAt:   cat.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			UpdatedAt:   cat.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		}
 	}
 
