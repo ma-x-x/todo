@@ -171,8 +171,10 @@ else
     echo "正在初始化数据库..."
     docker-compose exec -T mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "
     CREATE DATABASE IF NOT EXISTS todo_db;
-    CREATE USER IF NOT EXISTS 'todo_user'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+    DROP USER IF EXISTS 'todo_user'@'%';
+    CREATE USER 'todo_user'@'%' IDENTIFIED BY '${DB_PASSWORD}';
     GRANT ALL PRIVILEGES ON todo_db.* TO 'todo_user'@'%';
+    ALTER USER 'todo_user'@'%' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
     FLUSH PRIVILEGES;
     "
 

@@ -60,18 +60,22 @@ services:
     restart: always
     ports:
       - "3306:3306"
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --bind-address=0.0.0.0
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=todo_db
-      - MYSQL_USER=todo_user
-      - MYSQL_PASSWORD=${DB_PASSWORD}
-      - TZ=Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: todo_db
+      MYSQL_USER: todo_user
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - mysql_data:/var/lib/mysql  # 数据持久化
-      - /etc/localtime:/etc/localtime:ro  # 同步宿主机时间
+      - mysql_data:/var/lib/mysql
+      # 添加自定义 MySQL 配置
+      - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
     networks:
       - todo-network
-    command: --default-authentication-plugin=mysql_native_password
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 5s
