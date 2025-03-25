@@ -74,23 +74,15 @@ export LOG_LEVEL=info
 export CONFIG_FILE=/app/configs/config.prod.yaml
 export TZ=Asia/Shanghai  # 设置时区为中国时区
 
-# 检查服务是否已经存在并运行
-check_service_exists() {
-    local service_name=$1
-    if docker ps --format '{{.Names}}' | grep -q "^${service_name}$"; then
-        return 0  # 服务正在运行
-    fi
-    return 1  # 服务未运行
-}
-
-# 检查服务是否健康
+# 检查 MySQL 是否健康
 check_mysql_health() {
-    if docker exec todo-mysql mysqladmin ping -h mysql -u"root" -p"${MYSQL_ROOT_PASSWORD}" --silent > /dev/null 2>&1; then
+    if mysqladmin ping -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" --silent > /dev/null 2>&1; then
         return 0  # MySQL 正常
     fi
     return 1  # MySQL 异常
 }
 
+# 检查 Redis 是否健康
 check_redis_health() {
     local max_attempts=30
     local attempt=1
@@ -98,7 +90,7 @@ check_redis_health() {
 
     if [ -z "${REDIS_PASSWORD}" ]; then
         while [ $attempt -le $max_attempts ]; do
-            if docker exec todo-redis redis-cli -h redis ping > /dev/null 2>&1; then
+            if redis-cli -h "${REDIS_HOST}" ping > /dev/null 2>&1; then
                 echo "Redis 连接成功（无密码）"
                 return 0
             fi
@@ -108,7 +100,7 @@ check_redis_health() {
         done
     else
         while [ $attempt -le $max_attempts ]; do
-            if docker exec todo-redis redis-cli -h redis -a "${REDIS_PASSWORD}" ping > /dev/null 2>&1; then
+            if redis-cli -h "${REDIS_HOST}" -a "${REDIS_PASSWORD}" ping > /dev/null 2>&1; then
                 echo "Redis 连接成功（带密码）"
                 return 0
             fi
@@ -118,8 +110,7 @@ check_redis_health() {
         done
     fi
 
-    echo "Redis 健康检查失败，查看日志："
-    docker logs todo-redis
+    echo "Redis 健康检查失败"
     return 1
 }
 
@@ -156,72 +147,35 @@ wait_for_redis() {
 # 创建必要的目录
 mkdir -p logs
 
-# 创建 docker 网络（如果不存在）
-docker network create todo-network 2>/dev/null || true
-
-# 检查并启动 MySQL
-if check_service_exists "todo-mysql" && check_mysql_health; then
-    echo "MySQL 已在运行且状态正常，跳过部署"
-else
-    echo "正在启动 MySQL..."
-    docker-compose up -d mysql
-    wait_for_mysql || exit 1
+# 检查 MySQL 连接和初始化
+echo "检查 MySQL 连接..."
+if check_mysql_health; then
+    echo "MySQL 连接正常"
     
-    # 初始化数据库
-    echo "正在初始化数据库..."
-    docker-compose exec -T mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "
-    CREATE DATABASE IF NOT EXISTS todo_db;
-    DROP USER IF EXISTS 'todo_user'@'%';
-    CREATE USER 'todo_user'@'%' IDENTIFIED BY '${DB_PASSWORD}';
-    GRANT ALL PRIVILEGES ON todo_db.* TO 'todo_user'@'%';
-    ALTER USER 'todo_user'@'%' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
-    FLUSH PRIVILEGES;
-    "
-
-    # 等待数据库完全就绪
-    sleep 5
-
     # 检查数据库是否需要初始化
-    TABLES_EXIST=$(docker-compose exec -T mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -N -e "
+    TABLES_EXIST=$(mysql -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" -N -e "
         SELECT COUNT(*) FROM information_schema.tables 
-        WHERE table_schema = 'todo_db' 
+        WHERE table_schema = '${DB_NAME}' 
         AND table_name IN ('users', 'todos', 'categories', 'reminders');
-    " todo_db)
+    " 2>/dev/null || echo "0")
 
     if [ "$TABLES_EXIST" = "0" ]; then
         echo "数据库为空，开始初始化..."
-        docker-compose exec -T mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" todo_db < scripts/init.sql
+        mysql -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < scripts/init.sql
         echo "数据库初始化完成"
     else
         echo "数据库表已存在，跳过初始化"
     fi
-fi
-
-# Redis 启动前临时设置系统参数
-echo "临时设置系统参数..."
-if [ -x "$(command -v sudo)" ]; then
-    sudo sysctl -w net.core.somaxconn=1024 || echo "警告: 无法设置 somaxconn"
-fi
-
-# 检查并启动 Redis
-if check_service_exists "todo-redis" && check_redis_health; then
-    echo "Redis 已在运行且状态正常，跳过部署"
 else
-    echo "正在启动 Redis..."
-    echo "Redis 配置信息："
-    echo "- 密码已设置: $([ -n "${REDIS_PASSWORD}" ] && echo "是" || echo "否")"
-    echo "- 数据持久化: 已启用"
-    echo "- 最大内存: 2GB"
-    
-    docker-compose up -d redis
-    
-    echo "等待 Redis 启动..."
-    sleep 5
-    
-    echo "Redis 容器日志："
-    docker-compose logs redis
-    
-    wait_for_redis || exit 1
+    echo "无法连接到 MySQL，请检查服务是否运行以及连接参数是否正确"
+    exit 1
+fi
+
+# 检查 Redis 连接
+echo "检查 Redis 连接..."
+if ! check_redis_health; then
+    echo "无法连接到 Redis，请检查服务是否运行以及连接参数是否正确"
+    exit 1
 fi
 
 # 停止并重新启动应用
