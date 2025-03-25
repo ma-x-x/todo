@@ -58,7 +58,7 @@ trap 'handle_error ${LINENO}' ERR
 # 环境检查函数
 ###################
 check_required_env() {
-    local required_vars=("MYSQL_ROOT_PASSWORD" "DB_PASSWORD" "JWT_SECRET")
+    local required_vars=("DB_HOST" "DB_USER" "MYSQL_ROOT_PASSWORD" "DB_PASSWORD" "JWT_SECRET")
     local missing_vars=()
     
     for var in "${required_vars[@]}"; do
@@ -72,6 +72,15 @@ check_required_env() {
         printf '%s\n' "${missing_vars[@]}"
         return 1
     fi
+    
+    # 输出环境变量值（敏感信息部分遮蔽）
+    log_info "环境变量检查通过，当前配置:"
+    echo "DB_HOST=${DB_HOST}"
+    echo "DB_USER=${DB_USER}"
+    # 对密码类信息只显示前两位和后两位
+    echo "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:0:2}****${MYSQL_ROOT_PASSWORD: -2}"
+    echo "DB_PASSWORD=${DB_PASSWORD:0:2}****${DB_PASSWORD: -2}"
+    echo "JWT_SECRET=${JWT_SECRET:0:2}****${JWT_SECRET: -2}"
     
     return 0
 }
