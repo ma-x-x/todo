@@ -149,6 +149,22 @@ mkdir -p logs
 
 # 检查 MySQL 连接和初始化
 echo "检查 MySQL 连接..."
+
+# 首先使用 root 用户创建数据库和用户
+echo "使用 root 用户初始化数据库..."
+if mysql -h"${DB_HOST}" -u"root" -p"${MYSQL_ROOT_PASSWORD}" -e "
+    CREATE DATABASE IF NOT EXISTS ${DB_NAME};
+    CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+    GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'%';
+    FLUSH PRIVILEGES;
+" 2>/dev/null; then
+    echo "数据库和用户初始化成功"
+else
+    echo "使用 root 用户初始化数据库失败，请检查 root 密码是否正确"
+    exit 1
+fi
+
+# 然后检查普通用户连接
 if check_mysql_health; then
     echo "MySQL 连接正常"
     
@@ -162,7 +178,12 @@ if check_mysql_health; then
     if [ "$TABLES_EXIST" = "0" ]; then
         echo "数据库为空，开始初始化..."
         mysql -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < scripts/init.sql
-        echo "数据库初始化完成"
+        if [ $? -eq 0 ]; then
+            echo "数据库初始化完成"
+        else
+            echo "数据库初始化失败"
+            exit 1
+        fi
     else
         echo "数据库表已存在，跳过初始化"
     fi
