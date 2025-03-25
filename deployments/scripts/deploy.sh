@@ -1,20 +1,44 @@
 #!/bin/bash
+#
+# 部署脚本 - 用于部署 Todo 应用
+#
+# 功能：
+# - 检查系统环境和必要参数
+# - 初始化和验证数据库连接
+# - 部署和监控应用状态
+#
+# 使用方法：
+# ./deploy.sh
+#
+# 环境变量：
+# - MYSQL_ROOT_PASSWORD: MySQL root 密码
+# - DB_PASSWORD: 应用数据库用户密码
+# - JWT_SECRET: JWT 密钥
+# - 其他可选环境变量见脚本内说明
+#
 
-# 确保脚本在出错时退出
-set -e
+set -e  # 确保脚本在出错时退出
 
-# 添加错误处理函数
+###################
+# 常量定义
+###################
+readonly MAX_RETRY=3
+readonly MAX_WAIT_TIME=60
+readonly APP_PORT=8081
+readonly CONFIG_FILE="configs/config.prod.yaml"
+
+###################
+# 日志和错误处理
+###################
+# 错误处理函数
 handle_error() {
     local exit_code=$?
     local line_number=$1
-    echo "错误发生在第 ${line_number} 行，退出码: ${exit_code}"
+    log_error "错误发生在第 ${line_number} 行，退出码: ${exit_code}"
     exit $exit_code
 }
 
-# 在脚本开头添加
-trap 'handle_error ${LINENO}' ERR
-
-# 添加日志函数
+# 日志函数
 log_info() {
     echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') - $1"
 }
@@ -23,211 +47,120 @@ log_error() {
     echo "[ERROR] $(date '+%Y-%m-%d %H:%M:%S') - $1" >&2
 }
 
-# 系统参数检查函数
-check_system_params() {
-    echo "检查系统参数..."
-    local warnings=()
-    
-    # 检查系统参数并收集警告信息
-    if [ "$(sysctl -n vm.overcommit_memory)" != "1" ]; then
-        warnings+=("vm.overcommit_memory 未设置为推荐值 1，可能影响 Redis 性能")
-    fi
-    
-    if [ "$(sysctl -n net.core.somaxconn)" -lt "1024" ]; then
-        warnings+=("net.core.somaxconn 小于推荐值 1024，可能影响高并发处理")
-    fi
-    
-    if [ -f /sys/kernel/mm/transparent_hugepage/enabled ]; then
-        if ! grep -q "\[never\]" /sys/kernel/mm/transparent_hugepage/enabled; then
-            warnings+=("透明大页面(THP)未禁用，可能导致 Redis 性能问题")
-        fi
-    fi
-
-    # 如果有警告，统一显示
-    if [ ${#warnings[@]} -gt 0 ]; then
-        echo "⚠️ 性能优化建议："
-        printf '%s\n' "${warnings[@]}"
-    fi
+log_warning() {
+    echo "[WARN] $(date '+%Y-%m-%d %H:%M:%S') - $1" >&2
 }
 
-# 检查环境变量
+# 设置错误处理
+trap 'handle_error ${LINENO}' ERR
+
+###################
+# 环境检查函数
+###################
 check_required_env() {
+    local required_vars=("MYSQL_ROOT_PASSWORD" "DB_PASSWORD" "JWT_SECRET")
     local missing_vars=()
     
-    if [ -z "${MYSQL_ROOT_PASSWORD}" ]; then
-        missing_vars+=("MYSQL_ROOT_PASSWORD")
-    fi
-    if [ -z "${DB_PASSWORD}" ]; then
-        missing_vars+=("DB_PASSWORD")
-    fi
-    if [ -z "${JWT_SECRET}" ]; then
-        missing_vars+=("JWT_SECRET")
-    fi
+    for var in "${required_vars[@]}"; do
+        if [ -z "${!var}" ]; then
+            missing_vars+=("$var")
+        fi
+    done
     
     if [ ${#missing_vars[@]} -ne 0 ]; then
-        echo "Error: Missing required environment variables:"
+        log_error "缺少必要的环境变量:"
         printf '%s\n' "${missing_vars[@]}"
-        exit 1
+        return 1
     fi
+    
+    return 0
 }
 
-# 检查环境变量
-check_required_env
-
-# 部署前的系统检查
-check_system_params
-
-# 设置环境变量（更新默认值）
-export MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-export DB_PASSWORD=${DB_PASSWORD}
-export DB_HOST=${DB_HOST:-localhost}  # 默认使用本地主机
-export DB_PORT=${DB_PORT:-3306}
-export DB_USER=${DB_USER:-todo_user}
-export DB_NAME=${DB_NAME:-todo_db}
-export REDIS_HOST=${REDIS_HOST:-localhost}  # 默认使用本地主机
-export REDIS_PORT=${REDIS_PORT:-6379}
-export REDIS_PASSWORD=${REDIS_PASSWORD}
-export JWT_SECRET=${JWT_SECRET}
-export SWAGGER_HOST=${SWAGGER_HOST:-api.example.com}
-export APP_ENV=prod
-export LOG_LEVEL=info
-export CONFIG_FILE=/app/configs/config.prod.yaml
-export TZ=Asia/Shanghai  # 设置时区为中国时区
-
-# 检查 MySQL 是否健康
+###################
+# 数据库相关函数
+###################
 check_mysql_health() {
-    local max_retries=3
     local retry_count=0
     
-    while [ $retry_count -lt $max_retries ]; do
+    while [ $retry_count -lt $MAX_RETRY ]; do
         if mysqladmin ping -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" --silent > /dev/null 2>&1; then
             return 0
         fi
         retry_count=$((retry_count + 1))
-        [ $retry_count -lt $max_retries ] && sleep 2
+        [ $retry_count -lt $MAX_RETRY ] && sleep 2
     done
     
-    log_error "MySQL 连接失败，已重试 ${max_retries} 次"
+    log_error "MySQL 连接失败，已重试 ${MAX_RETRY} 次"
     return 1
 }
 
-# 检查 Redis 是否健康
-check_redis_health() {
-    local max_attempts=30
-    local attempt=1
-    local wait_time=2
-
-    if [ -z "${REDIS_PASSWORD}" ]; then
-        while [ $attempt -le $max_attempts ]; do
-            if redis-cli -h "${REDIS_HOST}" ping > /dev/null 2>&1; then
-                echo "Redis 连接成功（无密码）"
-                return 0
-            fi
-            echo "尝试连接 Redis 中... ($attempt/$max_attempts)"
-            sleep $wait_time
-            attempt=$((attempt + 1))
-        done
-    else
-        while [ $attempt -le $max_attempts ]; do
-            if redis-cli -h "${REDIS_HOST}" -a "${REDIS_PASSWORD}" ping > /dev/null 2>&1; then
-                echo "Redis 连接成功（带密码）"
-                return 0
-            fi
-            echo "尝试连接 Redis 中... ($attempt/$max_attempts)"
-            sleep $wait_time
-            attempt=$((attempt + 1))
-        done
+initialize_database() {
+    log_info "初始化数据库..."
+    
+    local sql_commands="
+        CREATE DATABASE IF NOT EXISTS ${DB_NAME};
+        CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+        GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'%';
+        FLUSH PRIVILEGES;
+    "
+    
+    if ! mysql -v -h"${DB_HOST}" -u"root" -p"${MYSQL_ROOT_PASSWORD}" -e "$sql_commands"; then
+        log_error "数据库初始化失败"
+        return 1
     fi
-
-    echo "Redis 健康检查失败"
-    return 1
-}
-
-# 等待 MySQL 就绪的函数
-wait_for_mysql() {
-    echo "等待 MySQL 就绪..."
-    for i in {1..60}; do
-        if check_mysql_health; then
-            echo "MySQL 已就绪！"
-            return 0
-        fi
-        echo "等待 MySQL 就绪中... ($i/60)"
-        sleep 2
-    done
-    echo "MySQL 未能在指定时间内就绪"
-    return 1
-}
-
-# 等待 Redis 就绪的函数
-wait_for_redis() {
-    echo "等待 Redis 就绪..."
-    for i in {1..60}; do
-        if check_redis_health; then
-            echo "Redis 已就绪！"
-            return 0
-        fi
-        echo "等待 Redis 就绪中... ($i/60)"
-        sleep 2
-    done
-    echo "Redis 未能在指定时间内就绪"
-    return 1
-}
-
-# 创建必要的目录
-mkdir -p logs
-
-# 检查 MySQL 连接和初始化
-echo "检查 MySQL 连接..."
-
-# 首先使用 root 用户创建数据库和用户
-echo "使用 root 用户初始化数据库..."
-initialize_database
-
-# 然后检查普通用户连接
-if check_mysql_health; then
-    echo "MySQL 连接正常"
     
-    # 检查数据库是否需要初始化
-    TABLES_EXIST=$(mysql -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" -N -e "
+    log_info "数据库初始化成功"
+    return 0
+}
+
+initialize_tables() {
+    log_info "检查数据库表..."
+    
+    local tables_exist=$(mysql -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" -N -e "
         SELECT COUNT(*) FROM information_schema.tables 
         WHERE table_schema = '${DB_NAME}' 
         AND table_name IN ('users', 'todos', 'categories', 'reminders');
     " 2>/dev/null || echo "0")
 
-    if [ "$TABLES_EXIST" = "0" ]; then
-        echo "数据库为空，开始初始化..."
-        mysql -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < scripts/init.sql
-        if [ $? -eq 0 ]; then
-            echo "数据库初始化完成"
-        else
-            echo "数据库初始化失败"
-            exit 1
+    if [ "$tables_exist" = "0" ]; then
+        log_info "初始化数据库表..."
+        if ! mysql -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < scripts/init.sql; then
+            log_error "数据库表初始化失败"
+            return 1
         fi
+        log_info "数据库表初始化完成"
     else
-        echo "数据库表已存在，跳过初始化"
+        log_info "数据库表已存在，跳过初始化"
     fi
-else
-    echo "无法连接到 MySQL，请检查服务是否运行以及连接参数是否正确"
-    exit 1
-fi
+}
 
-# 检查 Redis 连接
-echo "检查 Redis 连接..."
-if ! check_redis_health; then
-    echo "无法连接到 Redis，请检查服务是否运行以及连接参数是否正确"
-    exit 1
-fi
+###################
+# Redis 相关函数
+###################
+check_redis_health() {
+    local redis_cmd="redis-cli -h ${REDIS_HOST}"
+    [ -n "${REDIS_PASSWORD}" ] && redis_cmd+=" -a ${REDIS_PASSWORD}"
+    
+    if $redis_cmd ping > /dev/null 2>&1; then
+        log_info "Redis 连接成功"
+        return 0
+    fi
+    
+    log_error "Redis 连接失败"
+    return 1
+}
 
-# 添加配置文件验证函数
+###################
+# 配置文件处理
+###################
 validate_config() {
     local config_file=$1
     
     if [ ! -f "$config_file" ]; then
         log_error "配置文件不存在: $config_file"
         return 1
-    }
+    fi
     
-    # 验证配置文件语法（如果是 YAML）
     if command -v yamllint >/dev/null 2>&1; then
         if ! yamllint -d relaxed "$config_file"; then
             log_error "配置文件语法验证失败"
@@ -238,45 +171,43 @@ validate_config() {
     return 0
 }
 
-# 优化配置文件处理
 process_config() {
-    local config_file="configs/config.prod.yaml"
-    local temp_file="configs/config.prod.yaml.tmp"
-    
     log_info "处理配置文件..."
     
-    if ! validate_config "$config_file"; then
+    if ! validate_config "$CONFIG_FILE"; then
         return 1
     fi
     
-    if ! envsubst < "$config_file" > "$temp_file"; then
+    local temp_file="${CONFIG_FILE}.tmp"
+    if ! envsubst < "$CONFIG_FILE" > "$temp_file"; then
         log_error "环境变量替换失败"
         return 1
-    }
+    fi
     
-    mv "$temp_file" "$config_file"
+    mv "$temp_file" "$CONFIG_FILE"
     log_info "配置文件处理完成"
 }
 
-# 优化应用部署函数
+###################
+# 应用部署函数
+###################
 deploy_application() {
     log_info "开始部署应用..."
     
-    # 停止并删除旧容器（如果存在）
+    # 清理旧容器
     if docker ps -a | grep -q "todo-api"; then
-        log_info "停止并删除旧容器..."
+        log_info "清理旧容器..."
         docker stop todo-api || true
         docker rm todo-api || true
     fi
     
-    # 构建新镜像
+    # 构建和启动
     log_info "构建应用镜像..."
     if ! docker-compose build --no-cache app; then
         log_error "应用构建失败"
         return 1
     fi
     
-    # 启动应用
     log_info "启动应用容器..."
     if ! docker-compose up -d app; then
         log_error "应用启动失败"
@@ -287,17 +218,16 @@ deploy_application() {
     return 0
 }
 
-# 优化健康检查函数
 check_application_health() {
     local max_attempts=30
     local attempt=1
-    local wait_time=10
     
     log_info "等待应用就绪..."
-    sleep $wait_time  # 初始等待
+    sleep 10  # 初始等待
     
     while [ $attempt -le $max_attempts ]; do
-        if curl -s -f http://localhost:8081/health | grep -q "healthy"; then
+        # 检查健康检查接口
+        if curl -s -f "http://localhost:${APP_PORT}/health" | grep -q "healthy"; then
             log_info "应用已就绪"
             return 0
         fi
@@ -320,83 +250,52 @@ check_application_health() {
     return 1
 }
 
-# 主部署流程
+###################
+# 清理函数
+###################
+cleanup() {
+    log_info "执行清理操作..."
+    rm -f configs/*.tmp
+    find logs/ -type f -mtime +7 -delete
+    log_info "清理完成"
+}
+
+###################
+# 主函数
+###################
 main() {
-    # 检查必要的环境变量
-    check_required_env
+    # 1. 环境检查
+    check_required_env || exit 1
     
-    # 检查系统参数
-    check_system_params
+    # 2. 设置环境变量
+    export DB_HOST=${DB_HOST:-localhost}
+    export DB_PORT=${DB_PORT:-3306}
+    export DB_USER=${DB_USER:-todo_user}
+    export DB_NAME=${DB_NAME:-todo_db}
+    export REDIS_HOST=${REDIS_HOST:-localhost}
+    export REDIS_PORT=${REDIS_PORT:-6379}
     
-    # 检查 MySQL 连接
-    log_info "检查 MySQL 连接..."
-    if ! wait_for_mysql; then
-        log_error "MySQL 连接失败"
-        exit 1
-    fi
+    # 3. 数据库初始化和检查
+    initialize_database || exit 1
+    initialize_tables || exit 1
     
-    # 检查 Redis 连接
-    log_info "检查 Redis 连接..."
-    if ! wait_for_redis; then
-        log_error "Redis 连接失败"
-        exit 1
-    fi
+    # 4. Redis 检查
+    check_redis_health || exit 1
     
-    # 处理配置文件
-    if ! process_config; then
-        log_error "配置文件处理失败"
-        exit 1
-    fi
+    # 5. 配置文件处理
+    process_config || exit 1
     
-    # 部署应用
-    if ! deploy_application; then
-        log_error "应用部署失败"
-        exit 1
-    fi
+    # 6. 应用部署
+    deploy_application || exit 1
     
-    # 检查应用健康状态
-    if ! check_application_health; then
-        log_error "应用健康检查失败"
-        exit 1
-    fi
+    # 7. 健康检查
+    check_application_health || exit 1
     
     log_info "部署成功完成！"
 }
 
+# 注册清理函数
+trap cleanup EXIT
+
 # 执行主函数
-main
-
-# 优化数据库初始化部分
-initialize_database() {
-    log_info "开始初始化数据库..."
-    
-    # 使用 -v 参数增加详细输出
-    if ! mysql -v -h"${DB_HOST}" -u"root" -p"${MYSQL_ROOT_PASSWORD}" -e "
-        CREATE DATABASE IF NOT EXISTS ${DB_NAME};
-        CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
-        GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'%';
-        FLUSH PRIVILEGES;
-    "; then
-        log_error "数据库初始化失败"
-        return 1
-    fi
-    
-    log_info "数据库初始化成功"
-    return 0
-}
-
-# 添加清理函数
-cleanup() {
-    log_info "开始清理..."
-    
-    # 清理临时文件
-    rm -f configs/*.tmp
-    
-    # 清理旧的日志文件（保留最近7天）
-    find logs/ -type f -mtime +7 -delete
-    
-    log_info "清理完成"
-}
-
-# 在脚本结束时调用清理
-trap cleanup EXIT 
+main 
