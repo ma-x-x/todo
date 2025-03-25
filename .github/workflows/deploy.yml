@@ -141,5 +141,7 @@ jobs:
         command_timeout: "20m"  # 命令超时时间设置为20分钟
         script: |
           cd /opt/todo-api
+          echo "开始执行部署脚本 ${BUILD_VERSION} 版本 DB_HOST:${DB_HOST} DB_USER:${DB_USER} DB_PASSWORD:${DB_PASSWORD} MYSQL_ROOT_PASSWORD:${MYSQL_ROOT_PASSWORD}"
           chmod +x deploy.sh
           ./deploy.sh 
+          echo "部署脚本执行完成"
