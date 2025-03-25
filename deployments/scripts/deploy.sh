@@ -160,7 +160,7 @@ if mysql -h"${DB_HOST}" -u"root" -p"${MYSQL_ROOT_PASSWORD}" -e "
 " 2>/dev/null; then
     echo "数据库和用户初始化成功"
 else
-    echo "使用 root 用户初始化数据库失败，请检查 root 密码是否正确"
+    echo "使用 root 用户初始化数据库失败: host:${DB_HOST},密码:${MYSQL_ROOT_PASSWORD}，请检查 root 密码是否正确"
     exit 1
 fi
 
