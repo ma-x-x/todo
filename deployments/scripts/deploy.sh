@@ -3,6 +3,26 @@
 # 确保脚本在出错时退出
 set -e
 
+# 添加错误处理函数
+handle_error() {
+    local exit_code=$?
+    local line_number=$1
+    echo "错误发生在第 ${line_number} 行，退出码: ${exit_code}"
+    exit $exit_code
+}
+
+# 在脚本开头添加
+trap 'handle_error ${LINENO}' ERR
+
+# 添加日志函数
+log_info() {
+    echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') - $1"
+}
+
+log_error() {
+    echo "[ERROR] $(date '+%Y-%m-%d %H:%M:%S') - $1" >&2
+}
+
 # 系统参数检查函数
 check_system_params() {
     echo "检查系统参数..."
@@ -57,15 +77,15 @@ check_required_env
 # 部署前的系统检查
 check_system_params
 
-# 设置环境变量
+# 设置环境变量（更新默认值）
 export MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
 export DB_PASSWORD=${DB_PASSWORD}
-export DB_HOST=${DB_HOST:-mysql}
-export DB_PORT=3306
+export DB_HOST=${DB_HOST:-localhost}  # 默认使用本地主机
+export DB_PORT=${DB_PORT:-3306}
 export DB_USER=${DB_USER:-todo_user}
-export DB_NAME=todo_db
-export REDIS_HOST=redis
-export REDIS_PORT=6379
+export DB_NAME=${DB_NAME:-todo_db}
+export REDIS_HOST=${REDIS_HOST:-localhost}  # 默认使用本地主机
+export REDIS_PORT=${REDIS_PORT:-6379}
 export REDIS_PASSWORD=${REDIS_PASSWORD}
 export JWT_SECRET=${JWT_SECRET}
 export SWAGGER_HOST=${SWAGGER_HOST:-api.example.com}
@@ -76,10 +96,19 @@ export TZ=Asia/Shanghai  # 设置时区为中国时区
 
 # 检查 MySQL 是否健康
 check_mysql_health() {
-    if mysqladmin ping -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" --silent > /dev/null 2>&1; then
-        return 0  # MySQL 正常
-    fi
-    return 1  # MySQL 异常
+    local max_retries=3
+    local retry_count=0
+    
+    while [ $retry_count -lt $max_retries ]; do
+        if mysqladmin ping -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" --silent > /dev/null 2>&1; then
+            return 0
+        fi
+        retry_count=$((retry_count + 1))
+        [ $retry_count -lt $max_retries ] && sleep 2
+    done
+    
+    log_error "MySQL 连接失败，已重试 ${max_retries} 次"
+    return 1
 }
 
 # 检查 Redis 是否健康
@@ -152,17 +181,7 @@ echo "检查 MySQL 连接..."
 
 # 首先使用 root 用户创建数据库和用户
 echo "使用 root 用户初始化数据库..."
-if mysql -h"${DB_HOST}" -u"root" -p"${MYSQL_ROOT_PASSWORD}" -e "
-    CREATE DATABASE IF NOT EXISTS ${DB_NAME};
-    CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
-    GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'%';
-    FLUSH PRIVILEGES;
-" 2>/dev/null; then
-    echo "数据库和用户初始化成功"
-else
-    echo "使用 root 用户初始化数据库失败: host:${DB_HOST},密码:${MYSQL_ROOT_PASSWORD}，请检查 root 密码是否正确"
-    exit 1
-fi
+initialize_database
 
 # 然后检查普通用户连接
 if check_mysql_health; then
@@ -199,95 +218,185 @@ if ! check_redis_health; then
     exit 1
 fi
 
-# 停止并重新启动应用
-echo "正在重新部署应用..."
-# 验证配置文件
-echo "验证配置文件..."
-if [ -f "configs/config.prod.yaml" ]; then
-    # 使用 envsubst 处理配置文件中的环境变量
-    envsubst < configs/config.prod.yaml > configs/config.prod.yaml.tmp
-    mv configs/config.prod.yaml.tmp configs/config.prod.yaml
-    echo "配置文件内容:"
-    cat configs/config.prod.yaml
-else
-    echo "错误: 找不到配置文件 configs/config.prod.yaml"
-    exit 1
-fi
-
-docker-compose build --no-cache app
-docker-compose up -d --force-recreate app
-
-# 输出容器创建后的即时状态
-echo "应用容器已创建，当前状态："
-docker inspect todo-api --format='{{.State.Status}}'
-
-# 输出健康检查配置
-echo "健康检查配置："
-docker inspect todo-api --format='{{.Config.Healthcheck}}'
-
-# 等待并检查应用日志
-echo "检查应用启动日志..."
-sleep 5
-docker-compose logs app
-
-# 等待应用就绪
-echo "等待应用就绪..."
-# 增加初始等待时间，给应用更多启动时间
-sleep 10
-
-for i in {1..180}; do  # 最多等待3分钟
-    # 检查健康检查接口，确保返回包含 "healthy" 的响应
-    if curl -s -f http://localhost:8081/health | grep -q "healthy"; then
-        echo "应用已就绪！"
-        break
+# 添加配置文件验证函数
+validate_config() {
+    local config_file=$1
+    
+    if [ ! -f "$config_file" ]; then
+        log_error "配置文件不存在: $config_file"
+        return 1
+    }
+    
+    # 验证配置文件语法（如果是 YAML）
+    if command -v yamllint >/dev/null 2>&1; then
+        if ! yamllint -d relaxed "$config_file"; then
+            log_error "配置文件语法验证失败"
+            return 1
+        fi
     fi
-    # 如果达到最大重试次数，则输出日志并退出
-    if [ $i -eq 180 ]; then
-        echo "应用未能在指定时间内就绪，检查日志..."
-        docker-compose logs --tail=100 app
+    
+    return 0
+}
+
+# 优化配置文件处理
+process_config() {
+    local config_file="configs/config.prod.yaml"
+    local temp_file="configs/config.prod.yaml.tmp"
+    
+    log_info "处理配置文件..."
+    
+    if ! validate_config "$config_file"; then
+        return 1
+    fi
+    
+    if ! envsubst < "$config_file" > "$temp_file"; then
+        log_error "环境变量替换失败"
+        return 1
+    }
+    
+    mv "$temp_file" "$config_file"
+    log_info "配置文件处理完成"
+}
+
+# 优化应用部署函数
+deploy_application() {
+    log_info "开始部署应用..."
+    
+    # 停止并删除旧容器（如果存在）
+    if docker ps -a | grep -q "todo-api"; then
+        log_info "停止并删除旧容器..."
+        docker stop todo-api || true
+        docker rm todo-api || true
+    fi
+    
+    # 构建新镜像
+    log_info "构建应用镜像..."
+    if ! docker-compose build --no-cache app; then
+        log_error "应用构建失败"
+        return 1
+    fi
+    
+    # 启动应用
+    log_info "启动应用容器..."
+    if ! docker-compose up -d app; then
+        log_error "应用启动失败"
+        return 1
+    fi
+    
+    log_info "应用部署完成"
+    return 0
+}
+
+# 优化健康检查函数
+check_application_health() {
+    local max_attempts=30
+    local attempt=1
+    local wait_time=10
+    
+    log_info "等待应用就绪..."
+    sleep $wait_time  # 初始等待
+    
+    while [ $attempt -le $max_attempts ]; do
+        if curl -s -f http://localhost:8081/health | grep -q "healthy"; then
+            log_info "应用已就绪"
+            return 0
+        fi
+        
+        # 检查容器状态
+        local container_status=$(docker inspect --format='{{.State.Status}}' todo-api 2>/dev/null)
+        if [ "$container_status" != "running" ]; then
+            log_error "容器状态异常: $container_status"
+            docker logs todo-api
+            return 1
+        fi
+        
+        log_info "等待应用就绪中... ($attempt/$max_attempts)"
+        sleep 2
+        attempt=$((attempt + 1))
+    done
+    
+    log_error "应用未能在指定时间内就绪"
+    docker logs todo-api
+    return 1
+}
+
+# 主部署流程
+main() {
+    # 检查必要的环境变量
+    check_required_env
+    
+    # 检查系统参数
+    check_system_params
+    
+    # 检查 MySQL 连接
+    log_info "检查 MySQL 连接..."
+    if ! wait_for_mysql; then
+        log_error "MySQL 连接失败"
         exit 1
     fi
-    echo "等待应用就绪中... ($i/180)"
-    sleep 2  # 每次检查间隔2秒
-done
-
-# 检查容器状态
-echo "检查容器状态..."
-docker-compose ps
-
-# 给应用更多时间达到健康状态
-max_health_checks=30
-for i in $(seq 1 $max_health_checks); do
-    status=$(docker inspect --format='{{.State.Health.Status}}' todo-api)
-    if [ "$status" = "healthy" ]; then
-        echo "应用健康状态检查通过！"
-        break
-    fi
-    if [ $i -eq $max_health_checks ]; then
-        echo "应用健康检查失败，当前状态: $status"
-        echo "输出详细日志："
-        docker-compose logs --tail=200 app
+    
+    # 检查 Redis 连接
+    log_info "检查 Redis 连接..."
+    if ! wait_for_redis; then
+        log_error "Redis 连接失败"
         exit 1
     fi
-    echo "等待应用达到健康状态... ($i/$max_health_checks)"
-    sleep 2
-done
-
-# 检查服务状态
-echo "检查服务状态..."
-docker-compose ps
-
-# 检查应用日志
-echo "检查应用日志..."
-docker-compose logs --tail=50 app
-
-echo "部署成功完成！"
-
-# 在部署开始时添加
-if [ -x "$(command -v sudo)" ] && [ -f "./setup_system.sh" ]; then
-    echo "检查系统参数..."
-    if ! sudo ./setup_system.sh; then
-        echo "⚠️ 系统参数可能未达到最优状态，可能会影响性能"
-        echo "建议在部署后运行 sudo ./setup_system.sh 进行优化"
+    
+    # 处理配置文件
+    if ! process_config; then
+        log_error "配置文件处理失败"
+        exit 1
     fi
-fi 
+    
+    # 部署应用
+    if ! deploy_application; then
+        log_error "应用部署失败"
+        exit 1
+    fi
+    
+    # 检查应用健康状态
+    if ! check_application_health; then
+        log_error "应用健康检查失败"
+        exit 1
+    fi
+    
+    log_info "部署成功完成！"
+}
+
+# 执行主函数
+main
+
+# 优化数据库初始化部分
+initialize_database() {
+    log_info "开始初始化数据库..."
+    
+    # 使用 -v 参数增加详细输出
+    if ! mysql -v -h"${DB_HOST}" -u"root" -p"${MYSQL_ROOT_PASSWORD}" -e "
+        CREATE DATABASE IF NOT EXISTS ${DB_NAME};
+        CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+        GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'%';
+        FLUSH PRIVILEGES;
+    "; then
+        log_error "数据库初始化失败"
+        return 1
+    fi
+    
+    log_info "数据库初始化成功"
+    return 0
+}
+
+# 添加清理函数
+cleanup() {
+    log_info "开始清理..."
+    
+    # 清理临时文件
+    rm -f configs/*.tmp
+    
+    # 清理旧的日志文件（保留最近7天）
+    find logs/ -type f -mtime +7 -delete
+    
+    log_info "清理完成"
+}
+
+# 在脚本结束时调用清理
+trap cleanup EXIT 
