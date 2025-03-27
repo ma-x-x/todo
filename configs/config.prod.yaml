@@ -6,7 +6,7 @@ server:
   swagger_host: ${SWAGGER_HOST}
   
 mysql:
-  host: mysql
+  host: ${DB_HOST}
   port: 3306
   username: todo_user
   password: ${DB_PASSWORD}
@@ -16,7 +16,7 @@ mysql:
   conn_max_lifetime: "1h"
 
 redis:
-  host: redis
+  host: ${REDIS_HOST}
   port: 6379
   password: ${REDIS_PASSWORD}
   db: 0
