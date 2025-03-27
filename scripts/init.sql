@@ -63,14 +63,11 @@ CREATE TABLE IF NOT EXISTS reminders (
     CONSTRAINT chk_notify_type CHECK (notify_type IN ('email', 'push'))
 );
 
--- 添加索引时检查是否存在
-DROP INDEX IF EXISTS idx_reminders_todo_id ON reminders;
-CREATE INDEX idx_reminders_todo_id ON reminders(todo_id);
-
--- 其他索引也类似处理
-CREATE INDEX idx_reminders_remind_at ON reminders(remind_at);
-CREATE INDEX idx_reminders_todo_remind ON reminders(todo_id, deleted_at);
-CREATE INDEX idx_reminders_remind_status ON reminders(remind_at, status, deleted_at);
+-- 使用 ALTER TABLE 添加索引，如果索引已存在会报错，但不会影响后续执行
+ALTER TABLE reminders ADD INDEX idx_reminders_todo_id (todo_id);
+ALTER TABLE reminders ADD INDEX idx_reminders_remind_at (remind_at);
+ALTER TABLE reminders ADD INDEX idx_reminders_todo_remind (todo_id, deleted_at);
+ALTER TABLE reminders ADD INDEX idx_reminders_remind_status (remind_at, status, deleted_at);
 
 -- 恢复 SQL 模式
 SET SQL_MODE=@OLD_SQL_MODE;
