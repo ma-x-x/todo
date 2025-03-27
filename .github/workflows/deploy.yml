@@ -92,10 +92,10 @@ jobs:
     - name: 复制文件到服务器
       uses: appleboy/scp-action@v0.1.7
       with:
-        host: ${{ secrets.SERVER_HOST }}
+        host: ${{ vars.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
         password: ${{ secrets.SERVER_PASSWORD }}
-        port: ${{ secrets.SERVER_PORT }}
+        port: ${{ vars.SERVER_PORT }}
         source: "deployment/*"
         target: "/opt/todo-api"
         strip_components: 1  # 去除 deployment 前缀
@@ -104,10 +104,10 @@ jobs:
     - name: 配置系统参数
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host: ${{ secrets.SERVER_HOST }}
+        host: ${{ vars.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
         password: ${{ secrets.SERVER_PASSWORD }}
-        port: ${{ secrets.SERVER_PORT }}
+        port: ${{ vars.SERVER_PORT }}
         script: |
           cd /opt/todo-api
           # 设置脚本执行权限
